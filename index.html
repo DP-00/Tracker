@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tracker</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --grey1: #151719;
+        --grey2: #35393d;
+        --grey3: #bec5c5;
+
+        --blue2: #003232;
+        --blue1: #0e2424;
+        --blue-text: #c9ffff;
+        --blue-dark: #091818;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html {
+        font-size: 50%;
+        font-family: "Montserrat", sans-serif;
+        background: var(--blue1);
+        color: var(--grey3);
+      }
+
+      body {
+        font-size: 2.4rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      section {
+        padding: 2rem 2.4rem;
+        width: 100vw;
+      }
+
+      section:nth-child(odd) {
+        background: var(--blue2);
+      }
+
+      section:nth-child(even) {
+        background: var(--blue1);
+      }
+
+      /* HEADINGS */
+      h1 {
+        font-size: 4.8rem;
+        text-align: center;
+        color: var(--blue-text);
+        padding: 2rem 0;
+      }
+
+      h2 {
+        font-size: 3rem;
+        text-align: center;
+        position: relative;
+        margin-bottom: 1.2rem;
+      }
+
+      .note {
+        text-align: center;
+        padding: 0.8rem 0;
+      }
+      /* TASKS */
+      .task-item {
+        text-align: center;
+        padding: 0.8rem 0;
+      }
+
+      /* LIST */
+      ul {
+        list-style: none;
+        width: fit-content;
+        margin: 0 auto; /* center whole list */
+        padding: 0.8rem 0;
+      }
+
+      li {
+        text-align: left; /* items left aligned */
+        margin: 0.4rem 0;
+      }
+
+      /* CHECKBOX */
+      input[type="checkbox"] {
+        margin-right: 1rem;
+        transform: scale(1.3);
+      }
+
+      /* OUTLINE-ONLY CHECKBOX (custom style) */
+      input[type="checkbox"] {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 1.6rem;
+        height: 1.6rem;
+        border: 0.2rem solid var(--grey3);
+        border-radius: 0.3rem;
+        background: transparent;
+        cursor: pointer;
+        position: relative;
+      }
+
+      /* checked state */
+      input[type="checkbox"]:checked {
+        background: var(--grey3);
+      }
+
+      /* optional checkmark */
+      input[type="checkbox"]:checked::after {
+        content: "";
+        position: absolute;
+        top: 0.2rem;
+        left: 0.4rem;
+        width: 0.4rem;
+        height: 0.8rem;
+        border: solid var(--blue1);
+        border-width: 0 0.2rem 0.2rem 0;
+        transform: rotate(45deg);
+      }
+
+      /* CITATION */
+      .done {
+        font-style: italic;
+        margin-top: 1rem;
+        color: var(--blue-text);
+        background-color: var(--blue-dark);
+        padding: 1rem 2rem;
+        border-radius: 0.4rem;
+        border-left: 0.3rem solid var(--grey3);
+        display: none;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>Tracker</h1>
+
+      <section id="morning">
+        <h2>☀︎ Morning</h2>
+        <div class="note"><i>for 15 min</i></div>
+        <div id="morning-task" class="task-item"></div>
+        <div id="morning-done" class="done"></div>
+      </section>
+
+      <section id="main">
+        <h2>🗓 Monthly</h2>
+        <div id="main-task" class="task-item"></div>
+        <div id="main-done" class="done"></div>
+      </section>
+
+      <section id="evening">
+        <h2>⏾ Evening</h2>
+        <ul id="evening-list"></ul>
+        <div id="evening-done" class="done"></div>
+      </section>
+    </div>
+
+    <!-- DROPBOX SDK -->
+    <script src="https://unpkg.com/dropbox/dist/Dropbox-sdk.min.js"></script>
+
+    <script src="script.js"></script>
+  </body>
+</html>
