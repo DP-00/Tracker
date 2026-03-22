@@ -139,8 +139,13 @@ async function checkMorningComplete() {
   if (checkbox.checked) {
     taskDiv.style.display = "none";
 
-    const done = await getRandomCitation();
-    doneDiv.textContent = done;
+    const comicUrl = await getRandomComic();
+
+    if (comicUrl) {
+      doneDiv.innerHTML = `<img src="${comicUrl}" style="width:100%; border-radius:8px;">`;
+    } else {
+      doneDiv.textContent = "No comic available";
+    }
     doneDiv.style.display = "block";
   } else {
     taskDiv.style.display = "block";
@@ -268,7 +273,7 @@ async function checkEveningComplete() {
 }
 
 /* =========================
-   CITATIONS
+   DONE
 ========================= */
 
 async function getRandomCitation() {
@@ -279,4 +284,38 @@ async function getRandomCitation() {
   const citations = lines.filter((line) => line.trim().startsWith("-")).map((line) => line.trim().substring(1).trim());
 
   return getRandomItem(citations);
+}
+
+async function getRandomComic() {
+  try {
+    console.log("Fetching comics list...");
+
+    const response = await dbx.filesListFolder({
+      path: "/comics", // folder inside your App folder
+    });
+
+    const files = response.result.entries.filter((f) => f[".tag"] === "file");
+
+    console.log(
+      "Comics found:",
+      files.map((f) => f.name),
+    );
+
+    if (files.length === 0) {
+      console.warn("No comics found!");
+      return null;
+    }
+
+    const randomFile = files[Math.floor(Math.random() * files.length)];
+    console.log("Selected comic:", randomFile.name);
+
+    const linkResponse = await dbx.filesGetTemporaryLink({
+      path: "/comics/" + randomFile.name,
+    });
+
+    return linkResponse.result.link;
+  } catch (err) {
+    console.error("Error fetching comic:", err);
+    return null;
+  }
 }
