@@ -2,8 +2,8 @@
    DROPBOX SETUP
 ========================= */
 
-const REDIRECT_URI = `${window.location.origin}/Tracker/`; //"http://localhost:8000/";
-// const REDIRECT_URI = "http://localhost:8000/"; //"http://localhost:8000/";
+// const REDIRECT_URI = `${window.location.origin}/Tracker/`; //"http://localhost:8000/";
+const REDIRECT_URI = "http://localhost:8000/"; //"http://localhost:8000/";
 const CLIENT_ID = "7ctgzhwolmiq6kc"; // <-- your client id
 let dbxAuth = new Dropbox.DropboxAuth({ clientId: CLIENT_ID });
 dbx = new Dropbox.Dropbox({ auth: dbxAuth });
@@ -110,6 +110,11 @@ function loadApp() {
   loadEveningTasks();
 }
 
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
 /* =========================
    MORNING
 ========================= */
@@ -125,10 +130,26 @@ async function loadMorningTask() {
 
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
-  checkbox.addEventListener("change", checkMorningComplete);
+  // checkbox.addEventListener("change", checkMorningComplete);
+  checkbox.addEventListener("change", (e) => {
+    const row = e.target.closest(".task-row");
+    row.classList.toggle("checked", e.target.checked);
 
-  container.appendChild(checkbox);
-  container.appendChild(document.createTextNode(" " + task));
+    checkMorningComplete();
+  });
+
+  // container.appendChild(checkbox);
+  // container.appendChild(document.createTextNode(" " + task));
+  const wrapper = document.createElement("div");
+  wrapper.className = "task-row";
+
+  const text2 = document.createElement("span");
+  text2.textContent = task;
+
+  wrapper.appendChild(text2);
+  wrapper.appendChild(checkbox);
+
+  container.appendChild(wrapper);
 }
 
 async function checkMorningComplete() {
@@ -146,6 +167,7 @@ async function checkMorningComplete() {
     } else {
       doneDiv.textContent = "No comic available";
     }
+
     doneDiv.style.display = "block";
   } else {
     taskDiv.style.display = "block";
@@ -184,10 +206,26 @@ async function loadMainTask() {
 
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
-  checkbox.addEventListener("change", checkMainComplete);
+  // checkbox.addEventListener("change", checkMainComplete);
+  checkbox.addEventListener("change", (e) => {
+    const row = e.target.closest(".task-row");
+    row.classList.toggle("checked", e.target.checked);
 
-  container.appendChild(checkbox);
-  container.appendChild(document.createTextNode(" " + task));
+    checkMainComplete();
+  });
+
+  // container.appendChild(checkbox);
+  // container.appendChild(document.createTextNode(" " + task));
+  const wrapper = document.createElement("div");
+  wrapper.className = "task-row";
+
+  const text2 = document.createElement("span");
+  text2.textContent = task;
+
+  wrapper.appendChild(text2);
+  wrapper.appendChild(checkbox);
+
+  container.appendChild(wrapper);
 }
 
 async function checkMainComplete() {
@@ -238,14 +276,39 @@ async function loadEveningTasks() {
     }
 
     if (applicable) {
+      // const li = document.createElement("li");
+
+      // const checkbox = document.createElement("input");
+      // checkbox.type = "checkbox";
+      // checkbox.addEventListener("change", checkEveningComplete);
+
+      // li.appendChild(checkbox);
+      // li.appendChild(document.createTextNode(task.replace(/^-+\s*/, "")));
+
+      // list.appendChild(li);
+
       const li = document.createElement("li");
 
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
-      checkbox.addEventListener("change", checkEveningComplete);
+      // checkbox.addEventListener("change", () => checkEveningComplete());
+      checkbox.addEventListener("change", (e) => {
+        const row = e.target.closest(".task-row");
+        row.classList.toggle("checked", e.target.checked);
 
-      li.appendChild(checkbox);
-      li.appendChild(document.createTextNode(task.replace(/^-+\s*/, "")));
+        checkEveningComplete();
+      });
+
+      const text = document.createElement("span");
+      text.textContent = task.replace(/^-+\s*/, "");
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "task-row";
+
+      wrapper.appendChild(text);
+      wrapper.appendChild(checkbox);
+
+      li.appendChild(wrapper);
 
       list.appendChild(li);
     }
@@ -273,7 +336,7 @@ async function checkEveningComplete() {
 }
 
 /* =========================
-   DONE
+   CITATIONS
 ========================= */
 
 async function getRandomCitation() {
