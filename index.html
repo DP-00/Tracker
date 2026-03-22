@@ -4,8 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tracker</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0E2424">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Emoji&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet" />
     <style>
       :root {
@@ -27,7 +26,7 @@
 
       html {
         font-size: 50%;
-        font-family: "Montserrat", sans-serif;
+        /* font-family: "Montserrat", sans-serif; */
         background: var(--blue1);
         color: var(--grey3);
       }
@@ -37,19 +36,50 @@
         display: flex;
         flex-direction: column;
         align-items: center;
+        font-family: "Montserrat", "Noto Emoji", sans-serif;
       }
 
       section {
-        padding: 2rem 2.4rem;
+        padding: 2rem 8rem;
         width: 100vw;
-      }
-
-      section:nth-child(odd) {
-        background: var(--blue2);
-      }
-
-      section:nth-child(even) {
         background: var(--blue1);
+      }
+
+      .screen {
+        display: none;
+        min-height: 80vh;
+      }
+
+      .screen.active {
+        display: block;
+      }
+
+      .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 7rem;
+        background: var(--blue-dark);
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        border-top: 1px solid var(--grey2);
+      }
+
+      .bottom-nav button {
+        background: none;
+        border: none;
+        font-size: 3rem;
+        color: var(--grey3);
+        cursor: pointer;
+        font-family: "Noto Emoji", sans-serif;
+        font-size: 3.4rem;
+        filter: brightness(1.2) contrast(1.2);
+      }
+
+      .bottom-nav button:active {
+        transform: scale(0.9);
       }
 
       /* HEADINGS */
@@ -119,12 +149,50 @@
         content: "";
         position: absolute;
         top: 0.2rem;
-        left: 0.4rem;
-        width: 0.4rem;
-        height: 0.8rem;
+        left: 0.6rem;
+        width: 0.6rem;
+        height: 1rem;
         border: solid var(--blue1);
         border-width: 0 0.2rem 0.2rem 0;
         transform: rotate(45deg);
+      }
+
+      .task-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        padding: 0.8rem 0;
+      }
+
+      .task-row span {
+        text-align: left;
+        flex: 1;
+      }
+
+      input[type="checkbox"] {
+        width: 2.4rem;
+        height: 2.4rem;
+        margin-left: 1.5rem;
+      }
+
+      .task-row span {
+        transition: all 0.3s ease;
+      }
+
+      .task-row.checked span {
+        text-decoration: line-through;
+        opacity: 0.5;
+      }
+
+      .task-row.checked {
+        filter: brightness(0.7);
+      }
+
+      .task-row.checked span {
+        text-decoration: line-through;
+        opacity: 0.5;
+        transform: scale(0.98);
       }
 
       /* CITATION */
@@ -142,7 +210,39 @@
   </head>
 
   <body>
-    <div class="container">
+    <div id="app">
+      <section class="screen active" id="morning">
+        <h2>🌅 Morning</h2>
+        <div class="note"><i>for 15 min</i></div>
+        <div id="morning-task" class="task-item"></div>
+        <div id="morning-done" class="done"></div>
+      </section>
+      <section class="screen" id="main">
+        <h2>🎯 Monthly</h2>
+        <div id="main-task" class="task-item"></div>
+        <div id="main-done" class="done"></div>
+      </section>
+      <section class="screen" id="evening">
+        <h2>🌙 Evening</h2>
+        <ul id="evening-list"></ul>
+        <div id="evening-done" class="done"></div>
+      </section>
+
+      <section class="screen" id="week"><h2>📅 Week Tasks</h2></section>
+      <section class="screen" id="mood"><h2>😶 Mood Tracker</h2></section>
+      <section class="screen" id="stats"><h2>📊 Stats</h2></section>
+    </div>
+
+    <nav class="bottom-nav">
+      <button onclick="showScreen('morning')">🌅</button>
+      <button onclick="showScreen('main')">🎯</button>
+      <button onclick="showScreen('evening')">🌙</button>
+      <button onclick="showScreen('week')">📅</button>
+      <button onclick="showScreen('mood')">😶</button>
+      <button onclick="showScreen('stats')">📊</button>
+    </nav>
+
+    <!-- <div class="container">
       <h1>Tracker</h1>
 
       <section id="morning">
@@ -163,7 +263,7 @@
         <ul id="evening-list"></ul>
         <div id="evening-done" class="done"></div>
       </section>
-    </div>
+    </div> -->
 
     <!-- DROPBOX SDK -->
     <script src="https://unpkg.com/dropbox/dist/Dropbox-sdk.min.js"></script>
