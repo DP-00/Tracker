@@ -2,8 +2,8 @@
    DROPBOX SETUP
 ========================= */
 
-// const REDIRECT_URI = `${window.location.origin}/Tracker/`; //"http://localhost:8000/";
-const REDIRECT_URI = "http://localhost:8000/"; //"http://localhost:8000/";
+const REDIRECT_URI = `${window.location.origin}/Tracker/`; //"http://localhost:8000/";
+// const REDIRECT_URI = "http://localhost:8000/"; //"http://localhost:8000/";
 const CLIENT_ID = "7ctgzhwolmiq6kc"; // <-- your client id
 let dbxAuth = new Dropbox.DropboxAuth({ clientId: CLIENT_ID });
 dbx = new Dropbox.Dropbox({ auth: dbxAuth });
