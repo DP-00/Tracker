@@ -96,18 +96,11 @@ async function fetchFile(file) {
    UTIL
 ========================= */
 
-function getRandomItem(array) {
-  return array[Math.floor(Math.random() * array.length)];
-}
-
-/* =========================
-   APP LOADER
-========================= */
-
 function loadApp() {
-  loadMorningTask();
-  loadMainTask();
-  loadEveningTasks();
+  loadQuest("morning", "MorningTasks.md", "comic");
+  loadQuest("main", "MonthlyTasks.md", "citation");
+  loadQuest("evening", "EveningTasks.md", "citation");
+  loadCleanUpTasks();
 }
 
 function showScreen(id) {
@@ -115,142 +108,78 @@ function showScreen(id) {
   document.getElementById(id).classList.add("active");
 }
 
-/* =========================
-   MORNING
-========================= */
-
-async function loadMorningTask() {
-  const text = await fetchFile("MorningTasks.md");
-  const tasks = text.split("\n").filter((line) => line.trim());
-
-  const task = getRandomItem(tasks);
-  const container = document.getElementById("morning-task");
-
-  container.innerHTML = "";
-
-  const checkbox = document.createElement("input");
-  checkbox.type = "checkbox";
-  // checkbox.addEventListener("change", checkMorningComplete);
-  checkbox.addEventListener("change", (e) => {
-    const row = e.target.closest(".task-row");
-    row.classList.toggle("checked", e.target.checked);
-
-    checkMorningComplete();
-  });
-
-  // container.appendChild(checkbox);
-  // container.appendChild(document.createTextNode(" " + task));
-  const wrapper = document.createElement("div");
-  wrapper.className = "task-row";
-
-  const text2 = document.createElement("span");
-  text2.textContent = task;
-
-  wrapper.appendChild(text2);
-  wrapper.appendChild(checkbox);
-
-  container.appendChild(wrapper);
+function getRandomItem(array) {
+  return array[Math.floor(Math.random() * array.length)];
 }
 
-async function checkMorningComplete() {
-  const taskDiv = document.getElementById("morning-task");
-  const doneDiv = document.getElementById("morning-done");
-  const checkbox = taskDiv.querySelector('input[type="checkbox"]');
+// /* =========================
+//    QUESTS
+// ========================= */
 
-  if (checkbox.checked) {
-    taskDiv.style.display = "none";
-
-    const comicUrl = await getRandomComic();
-
-    if (comicUrl) {
-      doneDiv.innerHTML = `<img src="${comicUrl}" style="width:100%; border-radius:8px;">`;
-    } else {
-      doneDiv.textContent = "No comic available";
-    }
-
-    doneDiv.style.display = "block";
-  } else {
-    taskDiv.style.display = "block";
-    doneDiv.style.display = "none";
-  }
-}
-
-/* =========================
-   MAIN
-========================= */
-
-async function loadMainTask() {
-  const text = await fetchFile("MonthlyTasks.md");
-  const lines = text.split("\n");
-
-  const currentMonth = new Date().toLocaleString("default", {
-    month: "long",
-  });
+async function loadQuest(questType, fileName, rewardType) {
+  const text = await fetchFile(fileName);
 
   let task = "";
-  let inSection = false;
 
-  for (const line of lines) {
-    if (line.startsWith("## " + currentMonth)) {
-      inSection = true;
-    } else if (line.startsWith("## ") && inSection) {
-      break;
-    } else if (inSection && line.trim()) {
-      task = line.trim();
-      break;
+  if (questType === "morning") {
+    const tasks = text.split("\n").filter((line) => line.trim());
+    task = getRandomItem(tasks);
+  } else if (questType === "main") {
+    const lines = text.split("\n");
+    const currentMonth = new Date().toLocaleString("default", {
+      month: "long",
+    });
+
+    let inSection = false;
+    for (const line of lines) {
+      if (line.startsWith("## " + currentMonth)) {
+        inSection = true;
+      } else if (line.startsWith("## ") && inSection) {
+        break;
+      } else if (inSection && line.trim()) {
+        task = line.trim();
+        break;
+      }
+    }
+  } else if (questType === "evening") {
+    const tasks = text.split("\n").filter((line) => line.trim());
+    const day = new Date().toLocaleString("default", {
+      weekday: "long",
+    });
+
+    for (const t of tasks) {
+      const end = t.indexOf("]");
+      const condition = t.substring(1, end);
+
+      if (condition == day) {
+        task = t.substring(end + 1).trim();
+        break;
+      }
     }
   }
 
-  const container = document.getElementById("main-task");
-  container.innerHTML = "";
+  document.getElementById(`${questType}-task`).textContent = task;
 
-  const checkbox = document.createElement("input");
-  checkbox.type = "checkbox";
-  // checkbox.addEventListener("change", checkMainComplete);
-  checkbox.addEventListener("change", (e) => {
-    const row = e.target.closest(".task-row");
-    row.classList.toggle("checked", e.target.checked);
+  document.getElementById(`${questType}-btn`).onclick = async () => {
+    document.getElementById(`${questType}-btn`).textContent = "🎁";
+    document.getElementById(`${questType}-task`).style.opacity = "33%";
 
-    checkMainComplete();
-  });
-
-  // container.appendChild(checkbox);
-  // container.appendChild(document.createTextNode(" " + task));
-  const wrapper = document.createElement("div");
-  wrapper.className = "task-row";
-
-  const text2 = document.createElement("span");
-  text2.textContent = task;
-
-  wrapper.appendChild(text2);
-  wrapper.appendChild(checkbox);
-
-  container.appendChild(wrapper);
-}
-
-async function checkMainComplete() {
-  const taskDiv = document.getElementById("main-task");
-  const doneDiv = document.getElementById("main-done");
-  const checkbox = taskDiv.querySelector('input[type="checkbox"]');
-
-  if (checkbox.checked) {
-    taskDiv.style.display = "none";
-
-    const done = await getRandomCitation();
-    doneDiv.textContent = done;
-    doneDiv.style.display = "block";
-  } else {
-    taskDiv.style.display = "block";
-    doneDiv.style.display = "none";
-  }
+    if (rewardType === "comic") {
+      const url = await getRandomComic();
+      openReward(`<img src="${url}" style="width:100%">`);
+    } else if (rewardType === "citation") {
+      const txt = await getRandomCitation();
+      openReward(txt);
+    }
+  };
 }
 
 /* =========================
-   EVENING
+   CHECK-IN
 ========================= */
 
-async function loadEveningTasks() {
-  const text = await fetchFile("EveningTasks.md");
+async function loadCleanUpTasks() {
+  const text = await fetchFile("CleanUpTasks.md");
   const lines = text.split("\n");
 
   const day = new Date().toLocaleString("default", {
@@ -276,22 +205,10 @@ async function loadEveningTasks() {
     }
 
     if (applicable) {
-      // const li = document.createElement("li");
-
-      // const checkbox = document.createElement("input");
-      // checkbox.type = "checkbox";
-      // checkbox.addEventListener("change", checkEveningComplete);
-
-      // li.appendChild(checkbox);
-      // li.appendChild(document.createTextNode(task.replace(/^-+\s*/, "")));
-
-      // list.appendChild(li);
-
       const li = document.createElement("li");
 
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
-      // checkbox.addEventListener("change", () => checkEveningComplete());
       checkbox.addEventListener("change", (e) => {
         const row = e.target.closest(".task-row");
         row.classList.toggle("checked", e.target.checked);
@@ -326,8 +243,13 @@ async function checkEveningComplete() {
   if (allChecked) {
     list.style.display = "none";
 
-    const done = await getRandomCitation();
-    doneDiv.textContent = done;
+    const comicUrl = await getRandomComic();
+    if (comicUrl) {
+      doneDiv.innerHTML = `<img src="${comicUrl}" style="width:100%; border-radius:8px;">`;
+    } else {
+      doneDiv.textContent = "No comic available";
+    }
+
     doneDiv.style.display = "block";
   } else {
     list.style.display = "block";
@@ -336,8 +258,20 @@ async function checkEveningComplete() {
 }
 
 /* =========================
-   CITATIONS
+    REWARDS
 ========================= */
+
+function openReward(content) {
+  const popup = document.getElementById("reward-popup");
+  const box = document.getElementById("reward-content");
+
+  box.innerHTML = content;
+  popup.classList.add("active");
+}
+
+function closeReward() {
+  document.getElementById("reward-popup").classList.remove("active");
+}
 
 async function getRandomCitation() {
   const text = await fetchFile("Cytaty.md");
@@ -382,3 +316,48 @@ async function getRandomComic() {
     return null;
   }
 }
+
+// /* =========================
+// STATS
+// /* ========================= */
+function setRingProgress(circle, percent) {
+  const r = circle.getAttribute("r");
+  const circumference = 2 * Math.PI * r;
+
+  circle.style.strokeDasharray = circumference;
+
+  const offset = circumference * (1 - percent / 100);
+  circle.style.strokeDashoffset = offset;
+}
+
+function updateAllRings(mainValues, overlayValues) {
+  mainValues.forEach((val, i) => {
+    const ring = document.getElementById("ring" + (i + 1));
+    const label = document.getElementById("p" + (i + 1));
+
+    setRingProgress(ring, val);
+    label.textContent = val + "%";
+  });
+
+  overlayValues.forEach((val, i) => {
+    const ring = document.getElementById("overlay" + (i + 1));
+    setOverlayProgress(ring, val);
+  });
+}
+
+function setOverlayProgress(circle, percent) {
+  const r = circle.getAttribute("r");
+  const circumference = 2 * Math.PI * r;
+
+  circle.style.strokeDasharray = circumference;
+
+  const offset = circumference * (1 - percent / 100);
+  circle.style.strokeDashoffset = offset;
+}
+
+/* DEMO */
+// updateRings([72, 55, 38, 61, 27]);
+updateAllRings(
+  [72, 55, 38, 61, 27], // main (animated)
+  [60, 70, 50, 80, 10], // overlay (static target)
+);
