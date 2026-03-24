@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tracker</title>
-    <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Emoji&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet" />
     <style>
@@ -41,9 +40,25 @@
       }
 
       section {
-        padding: 2rem 4rem;
+        padding: 2rem 8rem;
+        margin-bottom: 10rem;
         width: 100vw;
         background: var(--blue1);
+      }
+
+      .quest-block {
+        margin-bottom: 3rem;
+      }
+
+      .quest-line {
+        margin: 3rem auto 6rem auto;
+        padding: 1rem 2rem;
+        background: var(--blue-dark);
+        border-radius: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 66vw;
       }
 
       .screen {
@@ -73,9 +88,14 @@
         border: none;
         font-size: 3rem;
         color: var(--grey3);
+        cursor: pointer;
         font-family: "Noto Emoji", sans-serif;
         font-size: 3.4rem;
         filter: brightness(1.2) contrast(1.2);
+      }
+
+      .bottom-nav button:active {
+        transform: scale(0.9);
       }
 
       /* HEADINGS */
@@ -103,12 +123,25 @@
         padding: 0.8rem 0;
       }
 
+      .action-btn {
+        margin-top: 1rem;
+        padding: 1rem 2rem;
+        background: var(--blue-dark);
+        border: none;
+        border-radius: 1rem;
+        font-size: larger;
+        color: var(--grey3);
+        font-family: "Noto Emoji", sans-serif;
+      }
+
       /* LIST */
       ul {
         list-style: none;
         width: fit-content;
-        margin: 0 auto; /* center whole list */
-        padding: 0.8rem 0;
+        margin: 3rem auto; /* center whole list */
+        padding: 1rem 3rem;
+        background: var(--blue-dark);
+        border-radius: 1rem;
       }
 
       li {
@@ -191,7 +224,66 @@
         transform: scale(0.98);
       }
 
-      /* CITATION */
+      /* DONE */
+      .complete {
+        opacity: 0.1;
+      }
+
+      #daily-stats-reward {
+        padding: 1rem;
+        margin: auto 0;
+        background: var(--blue-dark);
+        border: none;
+        border-radius: 1rem;
+        font-size: larger;
+        color: var(--grey3);
+        font-family: "Noto Emoji", sans-serif;
+        display: none;
+      }
+      .daily-stats {
+        display: flex;
+        justify-content: space-evenly;
+        padding: 1rem;
+        margin: 3rem auto;
+        background: var(--blue-dark);
+        border-radius: 1rem;
+        width: 66vw;
+        /* display: none; */
+      }
+      .action-btn {
+        margin-top: 1rem;
+        padding: 1rem 2rem;
+        background: var(--blue-dark);
+        color: var(--grey3);
+        border: none;
+        border-radius: 1rem;
+        /* display: none; */
+      }
+
+      .reward-popup {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 999;
+      }
+
+      .reward-popup.active {
+        display: flex;
+      }
+
+      .reward-content {
+        background: var(--blue-dark);
+        padding: 2rem;
+        border-radius: 1rem;
+        max-width: 90%;
+      }
+
       .done {
         font-style: italic;
         margin-top: 1rem;
@@ -202,64 +294,234 @@
         border-left: 0.3rem solid var(--grey3);
         display: none;
       }
+
+      /* --- STATS ---*/
+      .rings-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 3rem;
+      }
+
+      .rings {
+        position: relative;
+        width: 360px;
+        height: 360px;
+      }
+
+      svg {
+        position: absolute;
+        inset: 0;
+        transform: rotate(-90deg);
+      }
+
+      /* CONSTANT THICKNESS */
+      .track {
+        fill: none;
+        stroke: #091818;
+        stroke-width: 16;
+      }
+
+      .progress {
+        fill: none;
+        stroke-width: 16;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 1s ease;
+      }
+
+      /* COLORS */
+      .r1 {
+        stroke: #c9ffff;
+      }
+      .r2 {
+        stroke: #7fffd4;
+      }
+      .r3 {
+        stroke: #5fe3ff;
+      }
+      .r4 {
+        stroke: #3bbbbb;
+      }
+      .r5 {
+        stroke: #2a8f8f;
+      }
+
+      /* ICONS */
+      .icon {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 16px;
+        text-shadow:
+          0 0 2px #091818,
+          0 0 2px #091818;
+      }
+
+      /* MORE EVEN VERTICAL SPACING */
+      .i1 {
+        top: 19px;
+      }
+      .i2 {
+        top: 52px;
+      }
+      .i3 {
+        top: 86px;
+      }
+      .i4 {
+        top: 118px;
+      }
+      .i5 {
+        top: 152px;
+      }
+
+      /* % CONTAINER → FULL CONTROL */
+      .percentages {
+        position: absolute;
+
+        /* 👇 YOU CAN EDIT THESE */
+        left: 51%;
+        top: 73%;
+
+        transform: translate(-50%, -50%);
+
+        display: flex;
+
+        flex-direction: column-reverse;
+        align-items: center;
+        gap: 16px;
+
+        font-size: 14px;
+      }
+
+      /* halo */
+      .percentages div {
+        text-shadow:
+          0 0 2px #091818,
+          0 0 2px #091818;
+      }
+
+      .overlay {
+        fill: none;
+        stroke-width: 16;
+        stroke-linecap: round;
+        opacity: 0.5;
+      }
     </style>
   </head>
 
   <body>
     <div id="app">
-      <section class="screen active" id="morning">
-        <h2>🌅 Morning</h2>
-        <div class="note"><i>for 15 min</i></div>
-        <div id="morning-task" class="task-item"></div>
-        <div id="morning-done" class="done"></div>
+      <section class="screen" id="quests">
+        <div class="quest-block">
+          <h2>🌅 Morning Side Quest</h2>
+          <div class="note"><i>for 15 min</i></div>
+          <div class="quest-line">
+            <div id="morning-task" class="task-item">...</div>
+            <button id="morning-btn" class="action-btn">✔︎</button>
+          </div>
+        </div>
+        <div class="quest-block">
+          <h2>🎯 Main Quest</h2>
+          <div class="quest-line">
+            <div id="main-task" class="task-item">...</div>
+            <button id="main-btn" class="action-btn">✔︎</button>
+          </div>
+        </div>
+        <div class="quest-block">
+          <h2>🌙 Evening Quest</h2>
+          <div class="quest-line">
+            <div id="evening-task" class="task-item">...</div>
+            <button id="evening-btn" class="action-btn">✔︎</button>
+          </div>
+        </div>
       </section>
-      <section class="screen" id="main">
-        <h2>🎯 Monthly</h2>
-        <div id="main-task" class="task-item"></div>
-        <div id="main-done" class="done"></div>
-      </section>
-      <section class="screen" id="evening">
-        <h2>🌙 Evening</h2>
+      <section class="screen" id="clean-up">
+        <h2>🧹 Clean-up</h2>
         <ul id="evening-list"></ul>
         <div id="evening-done" class="done"></div>
       </section>
+      <section class="screen" id="check-in"><h2>😶 Check-in</h2></section>
+      <section class="screen" id="stats">
+        <h2>💡 Progress</h2>
+        <div class="daily-stats">
+          <div class="daily-stats-item complete">🌅</div>
+          <div class="daily-stats-item">🎯</div>
+          <div class="daily-stats-item complete">📅</div>
+          <div class="daily-stats-item">🧹</div>
+          <div class="daily-stats-item">😶</div>
+          <div class="daily-stats-item">🍽︎</div>
+          <div class="daily-stats-item">📵</div>
+          <div class="daily-stats-item">🍩</div>
 
-      <section class="screen" id="week"><h2>📅 Week Tasks</h2></section>
-      <section class="screen" id="mood"><h2>😶 Mood Tracker</h2></section>
-      <section class="screen" id="stats"><h2>📊 Stats</h2></section>
+          <button id="daily-stats-reward">🎁</button>
+        </div>
+        <div class="rings-container">
+          <div class="rings">
+            <svg viewBox="0 0 240 240">
+              <circle class="track" cx="120" cy="120" r="100" />
+              <circle id="ring1" class="progress r1" cx="120" cy="120" r="100" />
+              <circle id="overlay1" class="overlay r1" cx="120" cy="120" r="100" />
+            </svg>
+
+            <svg viewBox="0 0 240 240">
+              <circle class="track" cx="120" cy="120" r="78" />
+              <circle id="ring2" class="progress r2" cx="120" cy="120" r="78" />
+              <circle id="overlay2" class="overlay r2" cx="120" cy="120" r="78" />
+            </svg>
+
+            <svg viewBox="0 0 240 240">
+              <circle class="track" cx="120" cy="120" r="56" />
+              <circle id="ring3" class="progress r3" cx="120" cy="120" r="56" />
+              <circle id="overlay3" class="overlay r3" cx="120" cy="120" r="56" />
+            </svg>
+
+            <svg viewBox="0 0 240 240">
+              <circle class="track" cx="120" cy="120" r="34" />
+              <circle id="ring4" class="progress r4" cx="120" cy="120" r="34" />
+              <circle id="overlay4" class="overlay r4" cx="120" cy="120" r="34" />
+            </svg>
+
+            <svg viewBox="0 0 240 240">
+              <circle class="track" cx="120" cy="120" r="12" />
+              <circle id="ring5" class="progress r5" cx="120" cy="120" r="12" />
+              <circle id="overlay5" class="overlay r5" cx="120" cy="120" r="12" />
+            </svg>
+
+            <!-- ICONS -->
+            <div class="icon i1">🏃</div>
+            <div class="icon i2">🧠</div>
+            <div class="icon i3">📚</div>
+            <div class="icon i4">🧹</div>
+            <div class="icon i5">😶</div>
+
+            <!-- % -->
+            <div class="percentages">
+              <div id="p1">0%</div>
+              <div id="p2">0%</div>
+              <div id="p3">0%</div>
+              <div id="p4">0%</div>
+              <div id="p5">0%</div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="screen" id="plan">
+        <h2>📅 Plan</h2>
+      </section>
+    </div>
+
+    <!-- POPUP -->
+    <div id="reward-popup" class="reward-popup" onclick="closeReward()">
+      <div class="reward-content" id="reward-content"></div>
     </div>
 
     <nav class="bottom-nav">
-      <button onclick="showScreen('morning')">🌅</button>
-      <button onclick="showScreen('main')">🎯</button>
-      <button onclick="showScreen('evening')">🌙</button>
-      <button onclick="showScreen('week')">📅</button>
-      <button onclick="showScreen('mood')">😶</button>
-      <button onclick="showScreen('stats')">📊</button>
+      <button onclick="showScreen('quests')">🎯</button>
+      <button onclick="showScreen('clean-up')">🌙</button>
+      <button onclick="showScreen('check-in')">😶</button>
+      <button onclick="showScreen('stats')">💡</button>
+      <button onclick="showScreen('plan')">⏳</button>
     </nav>
-
-    <!-- <div class="container">
-      <h1>Tracker</h1>
-
-      <section id="morning">
-        <h2>☀︎ Morning</h2>
-        <div class="note"><i>for 15 min</i></div>
-        <div id="morning-task" class="task-item"></div>
-        <div id="morning-done" class="done"></div>
-      </section>
-
-      <section id="main">
-        <h2>🗓 Monthly</h2>
-        <div id="main-task" class="task-item"></div>
-        <div id="main-done" class="done"></div>
-      </section>
-
-      <section id="evening">
-        <h2>⏾ Evening</h2>
-        <ul id="evening-list"></ul>
-        <div id="evening-done" class="done"></div>
-      </section>
-    </div> -->
 
     <!-- DROPBOX SDK -->
     <script src="https://unpkg.com/dropbox/dist/Dropbox-sdk.min.js"></script>
