@@ -250,13 +250,14 @@
         width: 66vw;
         /* display: none; */
       }
-      .action-btn {
+      .load-btn {
         margin-top: 1rem;
         padding: 1rem 2rem;
         background: var(--blue-dark);
         color: var(--grey3);
         border: none;
         border-radius: 1rem;
+        width: 100%
         /* display: none; */
       }
 
@@ -470,7 +471,6 @@
       </section>
       <section class="screen active" id="stats">
         <h2>💡 Progress</h2>
-        <div>
           <div class="daily-stats">
             <div id="daily-stats-morning" class="daily-stats-item">🌅</div>
             <div id="daily-stats-main" class="daily-stats-item">🎯</div>
@@ -529,9 +529,8 @@
                 <div id="p4">0%</div>
                 <div id="p5">0%</div>
               </div>
-            </div>
           </div>
-          <button id="load-save-day" class="action-btn">Load the Day</button>
+          <button id="load-save-day" class="load-btn">Load the Day</button>
         </div>
       </section>
       <section class="screen" id="plan">
