@@ -40,7 +40,7 @@
       }
 
       section {
-        padding: 2rem 6rem;
+        padding: 2rem 8rem;
         margin-bottom: 10rem;
         width: 100vw;
         background: var(--blue1);
@@ -138,7 +138,7 @@
       ul {
         list-style: none;
         width: fit-content;
-        margin: 1rem auto; /* center whole list */
+        margin: 3rem auto; /* center whole list */
         padding: 1rem 3rem;
         background: var(--blue-dark);
         border-radius: 1rem;
@@ -296,6 +296,11 @@
       }
 
       /* --- STATS ---*/
+      #stats > div {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
       .rings-container {
         display: flex;
         flex-direction: column;
@@ -326,7 +331,7 @@
         fill: none;
         stroke-width: 16;
         stroke-linecap: round;
-        transition: stroke-dashoffset 1s ease;
+        transition: stroke-dashoffset 3s ease;
       }
 
       /* COLORS */
@@ -413,7 +418,7 @@
     <div id="app">
       <section class="screen" id="quests">
         <div class="quest-block">
-          <h2>🌅 Morning Side Quest</h2>
+          <h2>🌅 Side Quest</h2>
           <div class="note"><i>for 15 min</i></div>
           <div class="quest-line">
             <div id="morning-task" class="task-item">...</div>
@@ -428,7 +433,7 @@
           </div>
         </div>
         <div class="quest-block">
-          <h2>🌙 Evening Quest</h2>
+          <h2>🌙 Weekly Quest</h2>
           <div class="quest-line">
             <div id="evening-task" class="task-item">...</div>
             <button id="evening-btn" class="action-btn">✔︎</button>
@@ -440,69 +445,91 @@
         <ul id="evening-list"></ul>
         <div id="evening-done" class="done"></div>
       </section>
-      <section class="screen" id="check-in"><h2>😶 Check-in</h2></section>
-      <section class="screen" id="stats">
-        <h2>💡 Progress</h2>
-        <div class="daily-stats">
-          <div class="daily-stats-item complete">🌅</div>
-          <div class="daily-stats-item">🎯</div>
-          <div class="daily-stats-item complete">📅</div>
-          <div class="daily-stats-item">🧹</div>
-          <div class="daily-stats-item">😶</div>
-          <div class="daily-stats-item">🍽︎</div>
-          <div class="daily-stats-item">📵</div>
-          <div class="daily-stats-item">🍩</div>
-
-          <button id="daily-stats-reward">🎁</button>
+      <section class="screen" id="check-in">
+        <h2>😶 Check-in</h2>
+        <div class="quest-block">
+          <div class="quest-line">
+            <div id="checkIn-task" class="task-item">Mood</div>
+            <button id="checkIn-btn" class="action-btn">✔︎</button>
+          </div>
         </div>
-        <div class="rings-container">
-          <div class="rings">
-            <svg viewBox="0 0 240 240">
-              <circle class="track" cx="120" cy="120" r="100" />
-              <circle id="ring1" class="progress r1" cx="120" cy="120" r="100" />
-              <circle id="overlay1" class="overlay r1" cx="120" cy="120" r="100" />
-            </svg>
+        <div class="quest-block">
+          <div class="quest-line">
+            <div id="foodPlan-task" class="task-item">Food plan</div>
+            <button id="foodPlan-btn" class="action-btn">✔︎</button>
+          </div>
+        </div>
+        <div class="quest-block">
+          <div class="quest-line">
+            <div id="limits-task" class="task-item">Limits</div>
+            <button id="limits-btn" class="action-btn">✔︎</button>
+          </div>
+        </div>
+      </section>
+      <section class="screen active" id="stats">
+        <h2>💡 Progress</h2>
+        <div>
+          <div class="daily-stats">
+            <div id="daily-stats-morning" class="daily-stats-item">🌅</div>
+            <div id="daily-stats-main" class="daily-stats-item">🎯</div>
+            <div id="daily-stats-evening" class="daily-stats-item">📅</div>
+            <div id="daily-stats-cleanUp" class="daily-stats-item">🧹</div>
+            <div id="daily-stats-checkIn" class="daily-stats-item">😶</div>
+            <div id="daily-stats-food" class="daily-stats-item">🍽︎</div>
+            <div id="daily-stats-limits" class="daily-stats-item">📵</div>
 
-            <svg viewBox="0 0 240 240">
-              <circle class="track" cx="120" cy="120" r="78" />
-              <circle id="ring2" class="progress r2" cx="120" cy="120" r="78" />
-              <circle id="overlay2" class="overlay r2" cx="120" cy="120" r="78" />
-            </svg>
+            <button id="daily-stats-reward">🎁</button>
+          </div>
+          <div class="rings-container">
+            <div class="rings">
+              <svg viewBox="0 0 240 240">
+                <circle class="track" cx="120" cy="120" r="100" />
+                <circle id="ring1" class="progress r1" cx="120" cy="120" r="100" />
+                <circle id="overlay1" class="overlay r1" cx="120" cy="120" r="100" />
+              </svg>
 
-            <svg viewBox="0 0 240 240">
-              <circle class="track" cx="120" cy="120" r="56" />
-              <circle id="ring3" class="progress r3" cx="120" cy="120" r="56" />
-              <circle id="overlay3" class="overlay r3" cx="120" cy="120" r="56" />
-            </svg>
+              <svg viewBox="0 0 240 240">
+                <circle class="track" cx="120" cy="120" r="78" />
+                <circle id="ring2" class="progress r2" cx="120" cy="120" r="78" />
+                <circle id="overlay2" class="overlay r2" cx="120" cy="120" r="78" />
+              </svg>
 
-            <svg viewBox="0 0 240 240">
-              <circle class="track" cx="120" cy="120" r="34" />
-              <circle id="ring4" class="progress r4" cx="120" cy="120" r="34" />
-              <circle id="overlay4" class="overlay r4" cx="120" cy="120" r="34" />
-            </svg>
+              <svg viewBox="0 0 240 240">
+                <circle class="track" cx="120" cy="120" r="56" />
+                <circle id="ring3" class="progress r3" cx="120" cy="120" r="56" />
+                <circle id="overlay3" class="overlay r3" cx="120" cy="120" r="56" />
+              </svg>
 
-            <svg viewBox="0 0 240 240">
-              <circle class="track" cx="120" cy="120" r="12" />
-              <circle id="ring5" class="progress r5" cx="120" cy="120" r="12" />
-              <circle id="overlay5" class="overlay r5" cx="120" cy="120" r="12" />
-            </svg>
+              <svg viewBox="0 0 240 240">
+                <circle class="track" cx="120" cy="120" r="34" />
+                <circle id="ring4" class="progress r4" cx="120" cy="120" r="34" />
+                <circle id="overlay4" class="overlay r4" cx="120" cy="120" r="34" />
+              </svg>
 
-            <!-- ICONS -->
-            <div class="icon i1">🏃</div>
-            <div class="icon i2">🧠</div>
-            <div class="icon i3">📚</div>
-            <div class="icon i4">🧹</div>
-            <div class="icon i5">😶</div>
+              <svg viewBox="0 0 240 240">
+                <circle class="track" cx="120" cy="120" r="12" />
+                <circle id="ring5" class="progress r5" cx="120" cy="120" r="12" />
+                <circle id="overlay5" class="overlay r5" cx="120" cy="120" r="12" />
+              </svg>
 
-            <!-- % -->
-            <div class="percentages">
-              <div id="p1">0%</div>
-              <div id="p2">0%</div>
-              <div id="p3">0%</div>
-              <div id="p4">0%</div>
-              <div id="p5">0%</div>
+              <!-- ICONS -->
+              <div class="icon i1">🏃</div>
+              <div class="icon i2">🧠</div>
+              <div class="icon i3">📚</div>
+              <div class="icon i4">🧹</div>
+              <div class="icon i5">😶</div>
+
+              <!-- % -->
+              <div class="percentages">
+                <div id="p1">0%</div>
+                <div id="p2">0%</div>
+                <div id="p3">0%</div>
+                <div id="p4">0%</div>
+                <div id="p5">0%</div>
+              </div>
             </div>
           </div>
+          <button id="load-save-day" class="action-btn">Load the Day</button>
         </div>
       </section>
       <section class="screen" id="plan">
