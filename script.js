@@ -1,5 +1,9 @@
+let appData = null;
+let isDayLoaded = false;
+let month = new Date().toLocaleString("default", { month: "short" });
+
 /* =========================
-   DROPBOX SETUP
+   DROPBOX
 ========================= */
 
 const REDIRECT_URI = `${window.location.origin}/Tracker/`; //"http://localhost:8000/";
@@ -7,10 +11,6 @@ const REDIRECT_URI = `${window.location.origin}/Tracker/`; //"http://localhost:8
 const CLIENT_ID = "7ctgzhwolmiq6kc"; // <-- your client id
 let dbxAuth = new Dropbox.DropboxAuth({ clientId: CLIENT_ID });
 dbx = new Dropbox.Dropbox({ auth: dbxAuth });
-
-/* =========================
-   AUTH HELPERS
-========================= */
 
 function getCodeFromUrl() {
   return new URLSearchParams(window.location.search).get("code");
@@ -31,6 +31,53 @@ function doAuth() {
       window.location.href = authUrl;
     })
     .catch(console.error);
+}
+
+const fileCache = {};
+
+async function fetchFile(file) {
+  const pathToFetch = `/${file}`; // App folder root
+  console.log("Fetching file:", file, "-> path:", pathToFetch);
+
+  try {
+    // List all files in the app folder for debugging
+    const filesList = await dbx.filesListFolder({ path: "" });
+    console.log(
+      "Files in app folder:",
+      filesList.result.entries.map((f) => f.name),
+    );
+
+    const response = await dbx.filesGetTemporaryLink({ path: pathToFetch });
+    console.log("Temporary link response:", response);
+
+    const text = await (await fetch(response.result.link)).text();
+    console.log(`Loaded ${file}, length:`, text.length);
+    console.log("Content preview:", text.substring(0, 100));
+
+    return text;
+  } catch (err) {
+    console.error("Error fetching file:", file, err);
+    return "";
+  }
+}
+
+async function saveDataToDropbox(data) {
+  try {
+    const jsonString = JSON.stringify(data, null, 2);
+
+    console.log("Uploading JSON to Dropbox...");
+    console.log("Size:", jsonString.length);
+
+    await dbx.filesUpload({
+      path: "/data.json", // root of your app folder
+      mode: "overwrite",
+      contents: jsonString,
+    });
+
+    console.log("✅ Saved to Dropbox successfully");
+  } catch (err) {
+    console.error("❌ Error saving to Dropbox:", err);
+  }
 }
 
 /* =========================
@@ -62,45 +109,50 @@ window.onload = async function () {
 };
 
 /* =========================
-   FILE FETCHING (DROPBOX)
-========================= */
-const fileCache = {};
-
-async function fetchFile(file) {
-  const pathToFetch = `/${file}`; // App folder root
-  console.log("Fetching file:", file, "-> path:", pathToFetch);
-
-  try {
-    // List all files in the app folder for debugging
-    const filesList = await dbx.filesListFolder({ path: "" });
-    console.log(
-      "Files in app folder:",
-      filesList.result.entries.map((f) => f.name),
-    );
-
-    const response = await dbx.filesGetTemporaryLink({ path: pathToFetch });
-    console.log("Temporary link response:", response);
-
-    const text = await (await fetch(response.result.link)).text();
-    console.log(`Loaded ${file}, length:`, text.length);
-    console.log("Content preview:", text.substring(0, 100));
-
-    return text;
-  } catch (err) {
-    console.error("Error fetching file:", file, err);
-    return "";
-  }
-}
-
-/* =========================
-   UTIL
+   APP LOGIC
 ========================= */
 
 function loadApp() {
-  loadQuest("morning", "MorningTasks.md", "comic");
-  loadQuest("main", "MonthlyTasks.md", "citation");
-  loadQuest("evening", "EveningTasks.md", "citation");
-  loadCleanUpTasks();
+  document.getElementById("load-save-day").onclick = async () => {
+    if (!isDayLoaded) {
+      appData = JSON.parse(await fetchFile("data.json"));
+      console.log("Loaded app data:", appData.today);
+
+      loadQuest("morning", "MorningTasks.md", "comic");
+      loadQuest("main", "MonthlyTasks.md", "citation");
+      loadQuest("evening", "EveningTasks.md", "citation");
+      loadCleanUpTasks();
+      loadCheckIn("checkIn", "citation");
+      loadCheckIn("foodPlan", "comics");
+      loadCheckIn("limits", "citation");
+
+      isDayLoaded = true;
+      document.getElementById("load-save-day").textContent = isDayLoaded ? "Save the Day" : "Load the Day";
+
+      // let month = new Date().toLocaleString("default", { month: "short" });
+      updateAllRings(
+        [appData.monthly[month].morningQ / 30, appData.monthly[month].mainQ / 30, appData.monthly[month].eveningQ / 30, appData.monthly[month].cleanUp / 30, appData.monthly[month].checkIn / 30], // overlay (static target)
+        [appData.yearly.morningQ, appData.yearly.mainQ, appData.yearly.eveningQ, appData.yearly.cleanUp, appData.yearly.checkIn], // main (animated)
+      );
+    } else {
+      const t = appData.today;
+      const m = appData.monthly[month];
+
+      if (t.ifMorningQ) m.morningQ++;
+      if (t.ifMainQ) m.mainQ++;
+      if (t.ifEveningQ) m.eveningQ++;
+      if (t.ifCleanUp) m.cleanUp++;
+      if (t.ifCheckIn) m.checkIn++;
+
+      console.log("Saved stats:", appData);
+
+      isDayLoaded = false;
+
+      await saveDataToDropbox(appData);
+
+      document.getElementById("load-save-day").textContent = isDayLoaded ? "Save the Day" : "Load the Day";
+    }
+  };
 }
 
 function showScreen(id) {
@@ -112,11 +164,15 @@ function getRandomItem(array) {
   return array[Math.floor(Math.random() * array.length)];
 }
 
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
 // /* =========================
 //    QUESTS
 // ========================= */
 
 async function loadQuest(questType, fileName, rewardType) {
+  appData.today[`if${capitalize(questType)}Q`] = false;
   const text = await fetchFile(fileName);
 
   let task = "";
@@ -158,24 +214,96 @@ async function loadQuest(questType, fileName, rewardType) {
     }
   }
 
+  appData.today[`${questType}Q`] = task;
   document.getElementById(`${questType}-task`).textContent = task;
 
   document.getElementById(`${questType}-btn`).onclick = async () => {
-    document.getElementById(`${questType}-btn`).textContent = "🎁";
-    document.getElementById(`${questType}-task`).style.opacity = "33%";
+    if (!appData.today[`if${capitalize(questType)}Q`]) {
+      appData.today[`if${capitalize(questType)}Q`] = true;
+      document.getElementById(`daily-stats-${questType}`).classList.add("complete");
 
-    if (rewardType === "comic") {
-      const url = await getRandomComic();
-      openReward(`<img src="${url}" style="width:100%">`);
-    } else if (rewardType === "citation") {
-      const txt = await getRandomCitation();
-      openReward(txt);
+      document.getElementById(`${questType}-btn`).textContent = "🎁";
+      document.getElementById(`${questType}-task`).style.opacity = "33%";
+      if (rewardType === "comic") {
+        const url = await getRandomComic();
+        appData.today[`${questType}QReward`] = `<img src="${url}" style="width:100%">`;
+      } else if (rewardType === "citation") {
+        appData.today[`${questType}QReward`] = await getRandomCitation();
+      }
     }
+    openReward(appData.today[`${questType}QReward`]);
   };
 }
 
+// /* =========================
+//    QUESTS
+// ========================= */
+
+async function loadQuest(questType, fileName, rewardType) {
+  appData.today[`if${capitalize(questType)}Q`] = false;
+  const text = await fetchFile(fileName);
+
+  let task = "";
+
+  if (questType === "morning") {
+    const tasks = text.split("\n").filter((line) => line.trim());
+    task = getRandomItem(tasks);
+  } else if (questType === "main") {
+    const lines = text.split("\n");
+    const currentMonth = new Date().toLocaleString("default", {
+      month: "long",
+    });
+
+    let inSection = false;
+    for (const line of lines) {
+      if (line.startsWith("## " + currentMonth)) {
+        inSection = true;
+      } else if (line.startsWith("## ") && inSection) {
+        break;
+      } else if (inSection && line.trim()) {
+        task = line.trim();
+        break;
+      }
+    }
+  } else if (questType === "evening") {
+    const tasks = text.split("\n").filter((line) => line.trim());
+    const day = new Date().toLocaleString("default", {
+      weekday: "long",
+    });
+
+    for (const t of tasks) {
+      const end = t.indexOf("]");
+      const condition = t.substring(1, end);
+
+      if (condition == day) {
+        task = t.substring(end + 1).trim();
+        break;
+      }
+    }
+  }
+
+  appData.today[`${questType}Q`] = task;
+  document.getElementById(`${questType}-task`).textContent = task;
+
+  document.getElementById(`${questType}-btn`).onclick = async () => {
+    if (!appData.today[`if${capitalize(questType)}Q`]) {
+      appData.today[`if${capitalize(questType)}Q`] = true;
+      document.getElementById(`daily-stats-${questType}`).classList.add("complete");
+
+      document.getElementById(`${questType}-btn`).textContent = "🎁";
+      document.getElementById(`${questType}-task`).style.opacity = "33%";
+      if (rewardType === "comic") {
+        const url = await getRandomComic();
+        appData.today[`${questType}QReward`] = `<img src="${url}" style="width:100%">`;
+      } else if (rewardType === "citation") {
+        appData.today[`${questType}QReward`] = await getRandomCitation();
+      }
+    }
+    openReward(appData.today[`${questType}QReward`]);
+  };
+}
 /* =========================
-   CHECK-IN
+   CLEAN-UP
 ========================= */
 
 async function loadCleanUpTasks() {
@@ -235,26 +363,40 @@ async function loadCleanUpTasks() {
 async function checkEveningComplete() {
   const list = document.getElementById("evening-list");
   const doneDiv = document.getElementById("evening-done");
-
   const checkboxes = list.querySelectorAll('input[type="checkbox"]');
-
   const allChecked = Array.from(checkboxes).every((cb) => cb.checked);
 
   if (allChecked) {
     list.style.display = "none";
-
     const comicUrl = await getRandomComic();
-    if (comicUrl) {
-      doneDiv.innerHTML = `<img src="${comicUrl}" style="width:100%; border-radius:8px;">`;
-    } else {
-      doneDiv.textContent = "No comic available";
-    }
-
+    doneDiv.innerHTML = `<img src="${comicUrl}" style="width:100%; border-radius:8px;">`;
     doneDiv.style.display = "block";
-  } else {
-    list.style.display = "block";
-    doneDiv.style.display = "none";
+    appData.today[`ifCleanUp`] = true;
+    document.getElementById("daily-stats-cleanUp").classList.add("complete");
   }
+}
+
+// /* =========================
+//    CHECK-IN
+// ========================= */
+
+async function loadCheckIn(checkInType, rewardType) {
+  appData.today[`if${capitalize(checkInType)}`] = false;
+  document.getElementById(`${checkInType}-btn`).onclick = async () => {
+    if (!appData.today[`if${capitalize(checkInType)}`]) {
+      appData.today[`if${capitalize(checkInType)}`] = true;
+      document.getElementById(`daily-stats-${checkInType}`).classList.add("complete");
+      document.getElementById(`${checkInType}-btn`).textContent = "🎁";
+      document.getElementById(`${checkInType}-task`).style.opacity = "33%";
+      if (rewardType === "comic") {
+        const url = await getRandomComic();
+        appData.today[`${checkInType}Reward`] = `<img src="${url}" style="width:100%">`;
+      } else if (rewardType === "citation") {
+        appData.today[`${checkInType}Reward`] = await getRandomCitation();
+      }
+    }
+    openReward(appData.today[`${checkInType}Reward`]);
+  };
 }
 
 /* =========================
@@ -327,37 +469,20 @@ function setRingProgress(circle, percent) {
   circle.style.strokeDasharray = circumference;
 
   const offset = circumference * (1 - percent / 100);
-  circle.style.strokeDashoffset = offset;
+  circle.style.strokeDashoffset = offset.toFixed(0);
 }
 
 function updateAllRings(mainValues, overlayValues) {
   mainValues.forEach((val, i) => {
     const ring = document.getElementById("ring" + (i + 1));
-    const label = document.getElementById("p" + (i + 1));
-
-    setRingProgress(ring, val);
-    label.textContent = val + "%";
+    setRingProgress(ring, val * 100);
   });
 
   overlayValues.forEach((val, i) => {
     const ring = document.getElementById("overlay" + (i + 1));
-    setOverlayProgress(ring, val);
+    const label = document.getElementById("p" + (i + 1));
+
+    label.textContent = val + "%";
+    setRingProgress(ring, val);
   });
 }
-
-function setOverlayProgress(circle, percent) {
-  const r = circle.getAttribute("r");
-  const circumference = 2 * Math.PI * r;
-
-  circle.style.strokeDasharray = circumference;
-
-  const offset = circumference * (1 - percent / 100);
-  circle.style.strokeDashoffset = offset;
-}
-
-/* DEMO */
-// updateRings([72, 55, 38, 61, 27]);
-updateAllRings(
-  [72, 55, 38, 61, 27], // main (animated)
-  [60, 70, 50, 80, 10], // overlay (static target)
-);
