@@ -114,10 +114,17 @@ window.onload = async function () {
 
 function loadApp() {
   document.getElementById("load-save-day").onclick = async () => {
-    if (!isDayLoaded) {
-      appData = JSON.parse(await fetchFile("data.json"));
-      console.log("Loaded app data:", appData.today);
+    const todayKey = "tracker_" + new Date().toISOString().split("T")[0];
 
+    if (!isDayLoaded) {
+      const cached = localStorage.getItem(todayKey);
+      if (cached) {
+        console.log("Loaded from localStorage");
+        appData = JSON.parse(cached);
+      } else {
+        appData = JSON.parse(await fetchFile("data.json"));
+        console.log("Loaded app data:", appData.today);
+      }
       loadQuest("morning", "MorningTasks.md", "comic");
       loadQuest("main", "MonthlyTasks.md", "citation");
       loadQuest("evening", "EveningTasks.md", "citation");
@@ -125,8 +132,10 @@ function loadApp() {
       loadCheckIn("checkIn", "citation");
       loadCheckIn("foodPlan", "comics");
       loadCheckIn("limits", "citation");
-
+      await saveDataToDropbox(appData);
       isDayLoaded = true;
+      localStorage.setItem(todayKey, JSON.stringify(appData));
+
       document.getElementById("load-save-day").textContent = isDayLoaded ? "Save the Day" : "Load the Day";
 
       // let month = new Date().toLocaleString("default", { month: "short" });
@@ -146,6 +155,9 @@ function loadApp() {
 
       console.log("Saved stats:", appData);
 
+      const todayKey = "tracker_" + new Date().toISOString().split("T")[0];
+
+      localStorage.setItem(todayKey, JSON.stringify(appData));
       isDayLoaded = false;
 
       await saveDataToDropbox(appData);
@@ -235,73 +247,73 @@ async function loadQuest(questType, fileName, rewardType) {
   };
 }
 
-// /* =========================
-//    QUESTS
-// ========================= */
+// // /* =========================
+// //    QUESTS
+// // ========================= */
 
-async function loadQuest(questType, fileName, rewardType) {
-  appData.today[`if${capitalize(questType)}Q`] = false;
-  const text = await fetchFile(fileName);
+// async function loadQuest(questType, fileName, rewardType) {
+//   appData.today[`if${capitalize(questType)}Q`] = false;
+//   const text = await fetchFile(fileName);
 
-  let task = "";
+//   let task = "";
 
-  if (questType === "morning") {
-    const tasks = text.split("\n").filter((line) => line.trim());
-    task = getRandomItem(tasks);
-  } else if (questType === "main") {
-    const lines = text.split("\n");
-    const currentMonth = new Date().toLocaleString("default", {
-      month: "long",
-    });
+//   if (questType === "morning") {
+//     const tasks = text.split("\n").filter((line) => line.trim());
+//     task = getRandomItem(tasks);
+//   } else if (questType === "main") {
+//     const lines = text.split("\n");
+//     const currentMonth = new Date().toLocaleString("default", {
+//       month: "long",
+//     });
 
-    let inSection = false;
-    for (const line of lines) {
-      if (line.startsWith("## " + currentMonth)) {
-        inSection = true;
-      } else if (line.startsWith("## ") && inSection) {
-        break;
-      } else if (inSection && line.trim()) {
-        task = line.trim();
-        break;
-      }
-    }
-  } else if (questType === "evening") {
-    const tasks = text.split("\n").filter((line) => line.trim());
-    const day = new Date().toLocaleString("default", {
-      weekday: "long",
-    });
+//     let inSection = false;
+//     for (const line of lines) {
+//       if (line.startsWith("## " + currentMonth)) {
+//         inSection = true;
+//       } else if (line.startsWith("## ") && inSection) {
+//         break;
+//       } else if (inSection && line.trim()) {
+//         task = line.trim();
+//         break;
+//       }
+//     }
+//   } else if (questType === "evening") {
+//     const tasks = text.split("\n").filter((line) => line.trim());
+//     const day = new Date().toLocaleString("default", {
+//       weekday: "long",
+//     });
 
-    for (const t of tasks) {
-      const end = t.indexOf("]");
-      const condition = t.substring(1, end);
+//     for (const t of tasks) {
+//       const end = t.indexOf("]");
+//       const condition = t.substring(1, end);
 
-      if (condition == day) {
-        task = t.substring(end + 1).trim();
-        break;
-      }
-    }
-  }
+//       if (condition == day) {
+//         task = t.substring(end + 1).trim();
+//         break;
+//       }
+//     }
+//   }
 
-  appData.today[`${questType}Q`] = task;
-  document.getElementById(`${questType}-task`).textContent = task;
+//   appData.today[`${questType}Q`] = task;
+//   document.getElementById(`${questType}-task`).textContent = task;
+//   await saveDataToDropbox(appData);
+//   document.getElementById(`${questType}-btn`).onclick = async () => {
+//     if (!appData.today[`if${capitalize(questType)}Q`]) {
+//       appData.today[`if${capitalize(questType)}Q`] = true;
+//       document.getElementById(`daily-stats-${questType}`).classList.add("complete");
 
-  document.getElementById(`${questType}-btn`).onclick = async () => {
-    if (!appData.today[`if${capitalize(questType)}Q`]) {
-      appData.today[`if${capitalize(questType)}Q`] = true;
-      document.getElementById(`daily-stats-${questType}`).classList.add("complete");
-
-      document.getElementById(`${questType}-btn`).textContent = "🎁";
-      document.getElementById(`${questType}-task`).style.opacity = "33%";
-      if (rewardType === "comic") {
-        const url = await getRandomComic();
-        appData.today[`${questType}QReward`] = `<img src="${url}" style="width:100%">`;
-      } else if (rewardType === "citation") {
-        appData.today[`${questType}QReward`] = await getRandomCitation();
-      }
-    }
-    openReward(appData.today[`${questType}QReward`]);
-  };
-}
+//       document.getElementById(`${questType}-btn`).textContent = "🎁";
+//       document.getElementById(`${questType}-task`).style.opacity = "33%";
+//       if (rewardType === "comic") {
+//         const url = await getRandomComic();
+//         appData.today[`${questType}QReward`] = `<img src="${url}" style="width:100%">`;
+//       } else if (rewardType === "citation") {
+//         appData.today[`${questType}QReward`] = await getRandomCitation();
+//       }
+//     }
+//     openReward(appData.today[`${questType}QReward`]);
+//   };
+// }
 /* =========================
    CLEAN-UP
 ========================= */
