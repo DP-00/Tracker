@@ -90,6 +90,22 @@ function showScreen(id) {
   document.getElementById(id).classList.add("active");
 }
 
+function initTabs(sectionId) {
+  const section = document.getElementById(sectionId);
+  if (!section) return;
+
+  const buttons = section.querySelectorAll(".tab-btn[data-tab]");
+  buttons.forEach((button) => {
+    button.onclick = () => {
+      const tab = button.dataset.tab;
+      buttons.forEach((btn) => btn.classList.toggle("active", btn === button));
+      section.querySelectorAll(".tab-content").forEach((content) => {
+        content.classList.toggle("active", content.dataset.tab === tab);
+      });
+    };
+  });
+}
+
 function getRandomItem(array) {
   return array[Math.floor(Math.random() * array.length)];
 }
@@ -121,6 +137,8 @@ window.onload = async function () {
     await loadApp();
     await loadPlan();
     document.getElementById("save-plan").addEventListener("click", savePlan);
+    initTabs("plan");
+    initTabs("stats");
 
     // document.getElementById("load-save-day").click();
   } catch (error) {
