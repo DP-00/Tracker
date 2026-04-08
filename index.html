@@ -64,6 +64,14 @@
         gap: 1rem;
       }
 
+      .quest-multi-block .action-btn {
+        font-size: smaller;
+      }
+
+      .quest-multi-block .task-item {
+        font-size: smaller;
+      }
+
       .quest-line {
         margin: 3rem auto 6rem auto;
         padding: 1rem 2rem;
@@ -94,8 +102,7 @@
       }
 
       .mood-btn.active {
-        border-color: var(--blue-text);
-        transform: translateY(-2px);
+        color: var(--blue1);
       }
 
       #mood-note-input {
@@ -228,8 +235,7 @@
       }
 
       .action-btn {
-        margin-top: 1rem;
-        padding: 1rem 2rem;
+        padding: 1rem 0rem 1rem 1rem;
         background: var(--blue-dark);
         border: none;
         border-radius: 1rem;
@@ -518,7 +524,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 3rem 0;
+        padding: 6rem 0;
       }
 
       /* SVG */
@@ -541,25 +547,25 @@
 
       /* DARKER COLORS (matched to your theme) */
       .c1 {
-        stroke: #d94f4f;
+        stroke: #3a0e0b;
       }
       .c2 {
-        stroke: #d17c2f;
+        stroke: #6c3424;
       }
       .c3 {
-        stroke: #c7b52f;
+        stroke: #6c4c25;
       }
       .c4 {
-        stroke: #4fa963;
+        stroke: #122820;
       }
       .c5 {
-        stroke: #3a7edb;
+        stroke: #183f4a;
       }
       .c6 {
-        stroke: #7a3db8;
+        stroke: #21172a;
       }
       .c7 {
-        stroke: #b02060;
+        stroke: #3b1532;
       }
 
       /* CENTER ICON */
@@ -729,78 +735,87 @@
 
           <button id="daily-stats-reward">🎁</button>
         </div>
-        <div class="rings-container">
-          <div class="rings">
-            <svg viewBox="0 0 240 240">
-              <circle class="track" cx="120" cy="120" r="100" />
-              <circle id="ring1" class="progress r1" cx="120" cy="120" r="100" />
-              <circle id="overlay1" class="overlay r1" cx="120" cy="120" r="100" />
-            </svg>
+        <div class="plan-tabs stats-tabs">
+          <button class="tab-btn active" data-tab="cele">Cele</button>
+          <button class="tab-btn" data-tab="weekly">Weekly</button>
+          <button class="tab-btn" data-tab="mood">Mood</button>
+        </div>
+        <div class="plan-content stats-content">
+          <div id="stats-cele-tab" class="tab-content active" data-tab="cele">
+            <div class="rings-container">
+              <div class="rings">
+                <svg viewBox="0 0 240 240">
+                  <circle class="track" cx="120" cy="120" r="100" />
+                  <circle id="ring1" class="progress r1" cx="120" cy="120" r="100" />
+                  <circle id="overlay1" class="overlay r1" cx="120" cy="120" r="100" />
+                </svg>
 
-            <svg viewBox="0 0 240 240">
-              <circle class="track" cx="120" cy="120" r="78" />
-              <circle id="ring2" class="progress r2" cx="120" cy="120" r="78" />
-              <circle id="overlay2" class="overlay r2" cx="120" cy="120" r="78" />
-            </svg>
+                <svg viewBox="0 0 240 240">
+                  <circle class="track" cx="120" cy="120" r="78" />
+                  <circle id="ring2" class="progress r2" cx="120" cy="120" r="78" />
+                  <circle id="overlay2" class="overlay r2" cx="120" cy="120" r="78" />
+                </svg>
 
-            <svg viewBox="0 0 240 240">
-              <circle class="track" cx="120" cy="120" r="56" />
-              <circle id="ring3" class="progress r3" cx="120" cy="120" r="56" />
-              <circle id="overlay3" class="overlay r3" cx="120" cy="120" r="56" />
-            </svg>
+                <svg viewBox="0 0 240 240">
+                  <circle class="track" cx="120" cy="120" r="56" />
+                  <circle id="ring3" class="progress r3" cx="120" cy="120" r="56" />
+                  <circle id="overlay3" class="overlay r3" cx="120" cy="120" r="56" />
+                </svg>
 
-            <svg viewBox="0 0 240 240">
-              <circle class="track" cx="120" cy="120" r="34" />
-              <circle id="ring4" class="progress r4" cx="120" cy="120" r="34" />
-              <circle id="overlay4" class="overlay r4" cx="120" cy="120" r="34" />
-            </svg>
+                <svg viewBox="0 0 240 240">
+                  <circle class="track" cx="120" cy="120" r="34" />
+                  <circle id="ring4" class="progress r4" cx="120" cy="120" r="34" />
+                  <circle id="overlay4" class="overlay r4" cx="120" cy="120" r="34" />
+                </svg>
 
-            <svg viewBox="0 0 240 240">
-              <circle class="track" cx="120" cy="120" r="12" />
-              <circle id="ring5" class="progress r5" cx="120" cy="120" r="12" />
-              <circle id="overlay5" class="overlay r5" cx="120" cy="120" r="12" />
-            </svg>
+                <svg viewBox="0 0 240 240">
+                  <circle class="track" cx="120" cy="120" r="12" />
+                  <circle id="ring5" class="progress r5" cx="120" cy="120" r="12" />
+                  <circle id="overlay5" class="overlay r5" cx="120" cy="120" r="12" />
+                </svg>
 
-            <!-- ICONS -->
-            <div class="icon i1">🎯</div>
-            <div class="icon i2">🌙</div>
-            <div class="icon i3">🏃</div>
-            <div class="icon i4">🍽︎</div>
-            <!-- <div class="icon i5">😶</div> -->
+                <!-- ICONS -->
+                <div class="icon i1">🎯</div>
+                <div class="icon i2">🌙</div>
+                <div class="icon i3">🏃</div>
+                <div class="icon i4">🍽︎</div>
 
-            <!-- % -->
-            <div class="percentages">
-              <div id="p1">0%</div>
-              <div id="p2">0%</div>
-              <div id="p3">0%</div>
-              <div id="p4">0%</div>
-              <!-- <div id="p5">0%</div> -->
+                <!-- % -->
+                <div class="percentages">
+                  <div id="p1">0%</div>
+                  <div id="p2">0%</div>
+                  <div id="p3">0%</div>
+                  <div id="p4">0%</div>
+                </div>
+              </div>
+              <button id="save-day" class="load-btn">Save Day</button>
             </div>
           </div>
-          <button id="save-day" class="load-btn">Save Day</button>
-        </div>
-        <div class="rainbow-wrap" id="rainbow">
-          <svg class="rainbow" viewBox="0 0 200 100">
-            <!-- arcs -->
-            <path id="r1" class="halfring c1" d="M10 100 A90 90 0 0 1 190 100" />
-            <path id="r2" class="halfring c2" d="M20 100 A80 80 0 0 1 180 100" />
-            <path id="r3" class="halfring c3" d="M30 100 A70 70 0 0 1 170 100" />
-            <path id="r4" class="halfring c4" d="M40 100 A60 60 0 0 1 160 100" />
-            <path id="r5" class="halfring c5" d="M50 100 A50 50 0 0 1 150 100" />
-            <path id="r6" class="halfring c6" d="M60 100 A40 40 0 0 1 140 100" />
-            <path id="r7" class="halfring c7" d="M70 100 A30 30 0 0 1 130 100" />
-          </svg>
+          <div id="stats-weekly-tab" class="tab-content" data-tab="weekly">
+            <div class="rainbow-wrap" id="rainbow">
+              <svg class="rainbow" viewBox="0 0 200 100">
+                <!-- arcs -->
+                <path id="r1" class="halfring c1" d="M10 100 A90 90 0 0 1 190 100" />
+                <path id="r2" class="halfring c2" d="M20 100 A80 80 0 0 1 180 100" />
+                <path id="r3" class="halfring c3" d="M30 100 A70 70 0 0 1 170 100" />
+                <path id="r4" class="halfring c4" d="M40 100 A60 60 0 0 1 160 100" />
+                <path id="r5" class="halfring c5" d="M50 100 A50 50 0 0 1 150 100" />
+                <path id="r6" class="halfring c6" d="M60 100 A40 40 0 0 1 140 100" />
+                <path id="r7" class="halfring c7" d="M70 100 A30 30 0 0 1 130 100" />
+              </svg>
 
-          <!-- ICONS aligned with rings -->
-          <div class="ring-icons">
-            <div>🤝</div>
-            <div>📖</div>
-            <div>🎯</div>
-            <div>💭</div>
-            <div>💪</div>
-            <div>🇩🇪</div>
-            <div>🌐</div>
+              <div class="ring-icons">
+                <div>🤝</div>
+                <div>📖</div>
+                <div>🎯</div>
+                <div>💭</div>
+                <div>💪</div>
+                <div>🇩🇪</div>
+                <div>🌐</div>
+              </div>
+            </div>
           </div>
+          <div id="stats-mood-tab" class="tab-content" data-tab="mood"></div>
         </div>
       </section>
       <section class="screen" id="plan">
@@ -811,7 +826,7 @@
           <button class="tab-btn" data-tab="food">Food Plan</button>
         </div>
         <div class="plan-content">
-          <div id="weekly-tab" class="tab-content active">
+          <div id="weekly-tab" class="tab-content active" data-tab="weekly">
             <div class="plan-days">
               <div class="plan-day">
                 <span>Mon</span>
@@ -843,10 +858,10 @@
               </div>
             </div>
           </div>
-          <div id="monthly-tab" class="tab-content">
+          <div id="monthly-tab" class="tab-content" data-tab="monthly">
             <div class="plan-days"></div>
           </div>
-          <div id="food-tab" class="tab-content">
+          <div id="food-tab" class="tab-content" data-tab="food">
             <div class="plan-days"></div>
           </div>
         </div>
