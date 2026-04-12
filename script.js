@@ -300,6 +300,7 @@ async function generateQuests() {
   await generateMorningQuest();
   await generateMainQuest();
   await generateEveningQuest();
+  await saveChanges();
 }
 
 async function loadQuests() {
