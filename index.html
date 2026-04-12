@@ -61,7 +61,7 @@
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
-        gap: 0.25rem;
+        gap: 1rem;
       }
 
       .quest-multi-block .action-btn {
@@ -441,7 +441,6 @@
         transition: stroke-dashoffset 3s ease;
       }
 
-      /* COLORS */
       .r1 {
         stroke: #c9ffff;
       }
@@ -458,7 +457,6 @@
         stroke: #2a8f8f;
       }
 
-      /* ICONS */
       .icon {
         position: absolute;
         left: 50%;
@@ -469,7 +467,6 @@
           0 0 2px #091818;
       }
 
-      /* MORE EVEN VERTICAL SPACING */
       .i1 {
         top: 19px;
       }
@@ -486,26 +483,18 @@
         top: 152px;
       }
 
-      /* % CONTAINER → FULL CONTROL */
       .percentages {
         position: absolute;
-
-        /* 👇 YOU CAN EDIT THESE */
         left: 51%;
-        top: 73%;
-
+        top: 77.5%;
         transform: translate(-50%, -50%);
-
         display: flex;
-
         flex-direction: column-reverse;
         align-items: center;
         gap: 16px;
-
         font-size: 14px;
       }
 
-      /* halo */
       .percentages div {
         text-shadow:
           0 0 2px #091818,
@@ -519,7 +508,6 @@
         opacity: 0.5;
       }
 
-      /* CONTAINER */
       .rainbow-wrap {
         display: flex;
         flex-direction: column;
@@ -527,7 +515,6 @@
         padding: 6rem 0;
       }
 
-      /* SVG */
       .rainbow {
         position: relative;
         width: 360px;
@@ -666,22 +653,22 @@
           <h2>🌅 Side Quest</h2>
           <div class="note"><i>for 15 min</i></div>
           <div class="quest-line">
-            <div id="morning-task" class="task-item">...</div>
-            <button id="morning-btn" class="action-btn">✔︎</button>
+            <div id="morningQ-task" class="task-item">...</div>
+            <button id="morningQ-btn" class="action-btn">✔︎</button>
           </div>
         </div>
         <div class="quest-block">
           <h2>🎯 Main Quest</h2>
           <div class="quest-line">
-            <div id="main-task" class="task-item">...</div>
-            <button id="main-btn" class="action-btn">✔︎</button>
+            <div id="mainQ-task" class="task-item">...</div>
+            <button id="mainQ-btn" class="action-btn">✔︎</button>
           </div>
         </div>
         <div class="quest-block">
           <h2>🌙 Weekly Quest</h2>
           <div class="quest-line">
-            <div id="evening-task" class="task-item">...</div>
-            <button id="evening-btn" class="action-btn">✔︎</button>
+            <div id="eveningQ-task" class="task-item">...</div>
+            <button id="eveningQ-btn" class="action-btn">✔︎</button>
           </div>
         </div>
       </section>
@@ -711,7 +698,7 @@
             <button id="water-btn" class="action-btn">✔︎</button>
           </div>
           <div class="quest-line">
-            <div id="limits-task" class="task-item">Lim</div>
+            <div id="limits-task" class="task-item">Limits</div>
             <button id="limits-btn" class="action-btn">✔︎</button>
           </div>
         </div>
@@ -729,8 +716,8 @@
           <div id="daily-stats-perfect" class="daily-stats-item">✨0</div>
           <div id="daily-stats-quests" class="daily-stats-item">🎯</div>
           <div id="daily-stats-cleanUp" class="daily-stats-item">🌙</div>
-          <div id="daily-stats-checkIn" class="daily-stats-item">🏃</div>
           <div id="daily-stats-food" class="daily-stats-item">🍽︎</div>
+          <div id="daily-stats-activityMinutes" class="daily-stats-item">🏃</div>
           <div id="daily-stats-limits" class="daily-stats-item"></div>
 
           <button id="daily-stats-reward">🎁</button>
@@ -770,15 +757,15 @@
 
                 <svg viewBox="0 0 240 240">
                   <circle class="track" cx="120" cy="120" r="12" />
-                  <circle id="ring5" class="progress r5" cx="120" cy="120" r="12" />
+                  <!-- <circle id="ring5" class="progress r5" cx="120" cy="120" r="12" /> -->
                   <circle id="overlay5" class="overlay r5" cx="120" cy="120" r="12" />
                 </svg>
 
                 <!-- ICONS -->
                 <div class="icon i1">🎯</div>
                 <div class="icon i2">🌙</div>
-                <div class="icon i3">🏃</div>
-                <div class="icon i4">🍽︎</div>
+                <div class="icon i3">🍽︎</div>
+                <div class="icon i4">🏃</div>
 
                 <!-- % -->
                 <div class="percentages">
@@ -805,13 +792,13 @@
               </svg>
 
               <div class="ring-icons">
-                <div>🤝</div>
-                <div>📖</div>
-                <div>🎯</div>
-                <div>💭</div>
-                <div>💪</div>
-                <div>🇩🇪</div>
-                <div>🌐</div>
+                <div id="daily-stats-wt_volo">🤝</div>
+                <div id="daily-stats-wt_activeFun">📖</div>
+                <div id="daily-stats-wt_monthlyGoals">🎯</div>
+                <div id="daily-stats-wt_psychology">💭</div>
+                <div id="daily-stats-wt_sport">💪</div>
+                <div id="daily-stats-wt_german">🇩🇪</div>
+                <div id="daily-stats-wt_passiveFun">🌐</div>
               </div>
             </div>
           </div>
