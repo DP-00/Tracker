@@ -1,12 +1,17 @@
 let appData = null;
 let isDayLoaded = false;
-let month = new Date().toLocaleString("default", { month: "short" });
-let today = new Date().toISOString().split("T")[0];
-let dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
-let dayOfMonth = new Date().getDate();
-let dayOfWeek = new Date().toLocaleString("default", {
-  weekday: "long",
-});
+
+function trackerDate(now = new Date()) {
+  const d = new Date(now);
+  d.setHours(d.getHours() - 3);
+  return d;
+}
+
+const today = trackerDate().toISOString().split("T")[0];
+const dayOfWeek = trackerDate().toLocaleString("default", { weekday: "long" });
+const dayOfMonth = trackerDate().getDate();
+const dayOfYear = Math.floor((trackerDate() - new Date(trackerDate().getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+const month = trackerDate().toLocaleString("default", { month: "short" });
 /* =========================
    DROPBOX
 ========================= */
@@ -114,6 +119,7 @@ function getRandomItem(array) {
 function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
+
 /* =========================
    INIT APP
 ========================= */
@@ -143,51 +149,72 @@ window.onload = async function () {
   }
 };
 
-// TODO: optimize this function, try to minimize Dropbox calls by caching results and only fetching if day has changed
 async function loadData() {
   appData = JSON.parse(await fetchFile("data.json"));
   if (appData.lastUpdated != today) {
+    await saveAndResetDay(appData.lastUpdated);
     await generateQuests();
   }
-
-  //   if (!isDayLoaded) {
-  //          1. TRY LOCAL STORAGE FIRST
-  //     const cached = localStorage.getItem("tracker_today");
-  //     if (cached) {
-  //       const parsed = JSON.parse(cached);
-  //       appData = parsed;
-  //       if (parsed.lastUpdated === today) {
-  //         isDayLoaded = true;
-  //         return; // 🚨 STOP HERE → no Dropbox
-  //       }
-  //     }else{
-  //          2. FALLBACK TO DROPBOX
-  //     console.log("☁️ Fetching from Dropbox...");
-  //     appData = JSON.parse(await fetchFile("data.json"));
-  //     if (appData.lastUpdated === today) {
-
-  //     } else {
-  //          3. CACHE RESULT
-  //     localStorage.setItem("tracker_today", JSON.stringify(appData));
-  //     isDayLoaded = true;
-  //   }
-  //}
-  // }
 }
 
-document.getElementById("save-day").onclick = async () => {
-  await saveAndResetDay();
-  // localStorage.setItem("tracker_today", JSON.stringify(appData));
-  // isDayLoaded=false;
-};
+async function loadApp() {
+  loadQuests();
+  loadCleanUpTasks();
+  loadCheckIn();
+  renderDailyStats();
+  renderRingsStats();
+  generateDummyMoodData(100);
+  renderMoodChart();
+  await loadPlan();
+}
 
-// TODO: call this function on button or after every update to appData?
 async function saveChanges() {
   await saveFileToDropbox("data.json", JSON.stringify(appData, null, 2));
 }
 
-// TODO: call this function on button or specific time like 3:00?
-async function saveAndResetDay() {
+// document.getElementById("save-day").onclick = async () => {
+//   await saveAndResetDay();
+// };
+async function saveAndResetDay(archiveDate = today) {
+  const t = appData.today;
+  const w = appData.weekly;
+  const m = appData.monthly;
+  const y = appData.yearly;
+
+  // update yearly stats
+  if (t.ifMorningQ && t.ifMainQ && t.ifEveningQ && t.ifCleanUp && t.ifActivityMinutes && t.ifCheckIn && t.ifFoodPlan && t.ifWater && t.ifLimits) y.perfectDays++;
+  if (t.ifMorningQ && t.ifMainQ && t.ifEveningQ) y.routine++;
+  if (t.ifCleanUp && t.ifCheckIn) y.cleanUp++;
+  if (t.ifFoodPlan && t.ifWater && t.ifLimits) y.foodPlan++;
+  if (t.ifActivityMinutes) y.activityMinutes = y.activityMinutes + t.activityMinutes;
+
+  // update monthly stats
+  if (t.ifMorningQ && t.ifMainQ && t.ifEveningQ) m.routine++;
+  if (t.ifCleanUp && t.ifCheckIn) m.cleanUp++;
+  if (t.ifFoodPlan && t.ifWater && t.ifLimits) m.foodPlan++;
+  if (t.ifActivityMinutes) m.activityMinutes = m.activityMinutes + t.activityMinutes;
+
+  if (t.ifEveningQ) {
+    let weeklyTask = t.eveningQ;
+    if (weeklyTask.includes("Passive Fun")) {
+      w.ifWt_passiveFun = true;
+    } else if (weeklyTask.includes("German")) {
+      w.ifWt_german = true;
+    } else if (weeklyTask.includes("Sport")) {
+      w.ifWt_sport = true;
+    } else if (weeklyTask.includes("Psychology")) {
+      w.ifWt_psychology = true;
+    } else if (weeklyTask.includes("Monthly Goals")) {
+      w.ifWt_monthlyGoals = true;
+    } else if (weeklyTask.includes("Active Fun")) {
+      w.ifWt_activeFun = true;
+    } else if (weeklyTask.includes("Volo")) {
+      w.ifwt_volo = true;
+    }
+  }
+
+  appData.daily[archiveDate] = { ...appData.today };
+
   // reset weekly values if MONDAY
   if (dayOfWeek == "Monday") {
     appData.weekly = {
@@ -211,45 +238,6 @@ async function saveAndResetDay() {
       activityMinutes: 0,
     };
   }
-
-  const t = appData.today;
-  const w = appData.weekly;
-  const m = appData.monthly;
-  const y = appData.yearly;
-
-  // update yearly stats
-  if (t.ifMorningQ && t.ifMainQ && t.ifEveningQ && t.ifCleanUp && t.ifActivityMinutes && t.ifCheckIn && t.ifFoodPlan && t.ifWater && t.ifLimits) y.perfectDays++;
-  if (t.ifMorningQ && t.ifMainQ && t.ifEveningQ) y.routine++;
-  if (t.ifCleanUp && t.ifCheckIn) y.cleanUp++;
-  if (t.ifFoodPlan && t.ifWater && t.ifLimits) y.foodPlan++;
-  if (t.ifActivityMinutes) y.activityMinutes = y.activityMinutes + t.activityMinutes;
-
-  // update monthly stats
-  if (t.ifMorningQ && t.ifMainQ && t.ifEveningQ) m.routine++;
-  if (t.ifCleanUp && t.ifCheckIn) m.cleanUp++;
-  if (t.ifFoodPlan && t.ifWater && t.ifLimits) m.foodPlan++;
-  if (t.ifActivityMinutes) m.activityMinutes = m.activityMinutes + t.activityMinutes;
-
-  if (t.ifEveningQ) {
-    let weeklyTask = t.EveningQ;
-    if (weeklyTask.includes("Passive Fun")) {
-      w.ifWt_passiveFun = true;
-    } else if (weeklyTask.includes("German")) {
-      w.ifWt_german = true;
-    } else if (weeklyTask.includes("Sport")) {
-      w.ifWt_sport = true;
-    } else if (weeklyTask.includes("Psychology")) {
-      w.ifWt_psychology = true;
-    } else if (weeklyTask.includes("Monthly Goals")) {
-      w.ifWt_monthlyGoals = true;
-    } else if (weeklyTask.includes("Active Fun")) {
-      w.ifWt_activeFun = true;
-    } else if (weeklyTask.includes("Volo")) {
-      w.ifwt_volo = true;
-    }
-  }
-
-  appData.daily[today] = { ...appData.today };
 
   // Reset daily values
   appData.today = {
@@ -276,14 +264,9 @@ async function saveAndResetDay() {
   await saveFileToDropbox("data.json", JSON.stringify(appData, null, 2));
 }
 
-async function loadApp() {
-  loadQuests();
-  loadCleanUpTasks();
-  loadCheckIn();
-  renderDailyStats();
-  renderRingsStats();
-  await loadPlan();
-}
+// /* =========================
+//    QUESTS & TASKS
+// ========================= */
 
 async function loadTask(taskType, rewardType) {
   console.log(appData.today[`${taskType}`]);
@@ -293,10 +276,15 @@ async function loadTask(taskType, rewardType) {
     document.getElementById(`${taskType}-task`).textContent = appData.today[`${taskType}`];
   }
 
+  if (appData.today[`if${capitalize(taskType)}`]) {
+    completeTask(taskType);
+  }
+
   document.getElementById(`${taskType}-btn`).onclick = async () => {
     console.log("Clicked", taskType, "rewardType:", rewardType);
     completeTask(taskType);
     await generateReward(taskType, rewardType);
+    await saveChanges();
   };
 }
 
@@ -307,10 +295,6 @@ function completeTask(taskType) {
   document.getElementById(`${taskType}-task`).style.opacity = "33%";
   renderDailyStats();
 }
-
-// /* =========================
-//    QUESTS
-// ========================= */
 
 async function generateQuests() {
   await generateMorningQuest();
@@ -327,13 +311,13 @@ async function loadQuests() {
 async function generateMorningQuest() {
   const text = await fetchFile("MorningTasks.md");
   const tasks = text.split("\n").filter((line) => line.trim());
-  appData.today[`MorningQ`] = getRandomItem(tasks);
+  appData.today[`morningQ`] = getRandomItem(tasks);
 }
 
 async function generateMainQuest() {
   const text = await fetchFile("MonthlyTasks.md");
   const lines = text.split("\n");
-  const currentMonth = new Date().toLocaleString("default", {
+  const currentMonth = trackerDate().toLocaleString("default", {
     month: "long",
   });
 
@@ -344,7 +328,7 @@ async function generateMainQuest() {
     } else if (line.startsWith("## ") && inSection) {
       break;
     } else if (inSection && line.trim()) {
-      appData.today[`MainQ`] = line.trim();
+      appData.today[`mainQ`] = line.trim();
       break;
     }
   }
@@ -359,7 +343,7 @@ async function generateEveningQuest() {
     const condition = t.substring(1, end);
 
     if (condition == dayOfWeek) {
-      appData.today[`EveningQ`] = t.substring(end + 1).trim();
+      appData.today[`eveningQ`] = t.substring(end + 1).trim();
       break;
     }
   }
@@ -431,7 +415,8 @@ async function checkCleanUpTasks() {
     doneDiv.innerHTML = `<img src="${comicUrl}" style="width:100%; border-radius:8px;">`;
     doneDiv.style.display = "block";
     appData.today[`ifCleanUp`] = true;
-    document.getElementById("daily-stats-cleanUp").classList.add("complete");
+    renderDailyStats();
+    await saveChanges();
   }
 }
 
@@ -450,12 +435,13 @@ async function loadCheckIn() {
 function loadMoodCheckIn() {
   const buttons = document.querySelectorAll(".mood-btn");
   buttons.forEach((button) => {
-    button.onclick = () => {
+    button.onclick = async () => {
       const score = Number(button.dataset.score);
       appData.today.moodScore = score;
       appData.today.ifCheckIn = true;
+      await saveChanges();
       updateMoodButtons();
-      document.getElementById("daily-stats-checkIn").classList.add("complete");
+      renderDailyStats();
 
       const content = `
         <div class="mood-popup">
@@ -471,8 +457,10 @@ function loadMoodCheckIn() {
 
       const saveButton = document.getElementById("mood-note-save");
       if (saveButton) {
-        saveButton.onclick = () => {
+        saveButton.onclick = async () => {
           appData.today.moodNote = document.getElementById("mood-note-input").value.trim();
+          await saveChanges();
+          renderMoodChart();
           closeReward();
         };
       }
@@ -480,6 +468,7 @@ function loadMoodCheckIn() {
   });
 
   updateMoodButtons();
+  renderMoodChart();
 }
 
 function updateMoodButtons() {
@@ -493,28 +482,47 @@ function changeActivityMinutes(delta) {
   appData.today.activityMinutes = Math.max(0, Math.min(1000, appData.today.activityMinutes + delta));
   appData.weekly.activityMinutes = Math.max(0, Math.min(1000, appData.weekly.activityMinutes + delta));
   appData.today.ifActivityMinutes = true;
+  renderDailyStats();
   document.getElementById("activity-minutes").textContent = appData.weekly.activityMinutes;
 }
 
 function initActivityPicker() {
   document.getElementById("activity-minutes").textContent = appData.weekly.activityMinutes;
-  document.getElementById("activity-decrease").onclick = () => changeActivityMinutes(-15);
-  document.getElementById("activity-increase").onclick = () => changeActivityMinutes(15);
+  document.getElementById("activity-decrease").onclick = async () => {
+    changeActivityMinutes(-15);
+    await saveChanges();
+  };
+  document.getElementById("activity-increase").onclick = async () => {
+    changeActivityMinutes(15);
+    await saveChanges();
+  };
 }
 
 /* =========================
     REWARDS
 ========================= */
 
+// async function generateReward(rewardName, rewardType) {
+//   if (rewardType === "comic") {
+//     const url = await getRandomImg("/mems");
+//     appData.today[`${rewardName}Reward`] = `<img src="${url}" style="width:100%">`;
+//   } else if (rewardType === "citation") {
+//     appData.today[`${rewardName}Reward`] = await getRandomCitation();
+//   }
+//   openReward(appData.today[`${rewardName}Reward`]);
+// }
+
 async function generateReward(rewardName, rewardType) {
+  let content = "";
   if (rewardType === "comic") {
     const url = await getRandomImg("/mems");
-    appData.today[`${rewardName}Reward`] = `<img src="${url}" style="width:100%">`;
+    content = `<img src="${url}" style="width:100%">`;
   } else if (rewardType === "citation") {
-    appData.today[`${rewardName}Reward`] = await getRandomCitation();
+    content = await getRandomCitation();
   }
-  openReward(appData.today[`${rewardName}Reward`]);
+  openReward(content);
 }
+
 async function getRandomCitation() {
   const text = await fetchFile("Cytaty.md");
   const lines = text.split("\n");
@@ -569,7 +577,7 @@ function renderDailyStats() {
 
   if (t.ifMorningQ && t.ifMainQ && t.ifEveningQ) document.getElementById("daily-stats-quests").classList.add("complete");
   if (t.ifCleanUp && t.ifCheckIn) document.getElementById("daily-stats-cleanUp").classList.add("complete");
-  if (t.ifActivityMinutes) document.getElementById("daily-stats-checkIn").classList.add("complete");
+  if (t.ifActivityMinutes) document.getElementById("daily-stats-activityMinutes").classList.add("complete");
   if (t.ifFoodPlan && t.ifWater && t.ifLimits) document.getElementById("daily-stats-food").classList.add("complete");
   if (w.ifWt_passiveFun) document.getElementById("daily-stats-wt_passiveFun").classList.add("complete");
   if (w.ifWt_german) document.getElementById("daily-stats-wt_german").classList.add("complete");
@@ -633,8 +641,113 @@ function renderRingsStats() {
     [(y?.wt_volo * 7) / dayOfYear, (y?.wt_activeFun * 7) / dayOfYear, (y?.wt_monthlyGoals * 7) / dayOfYear, (y?.wt_psychology * 7) / dayOfYear, (y?.wt_sport * 7) / dayOfYear, (y?.wt_german * 7) / dayOfYear, (y?.wt_passiveFun * 7) / dayOfYear],
   );
 }
+function renderMoodChart() {
+  const container = document.getElementById("mood-chart");
+  if (!container) return;
 
-/* =========================
+  const dailyData = { ...(appData.daily || {}) };
+  if (appData.today && Number(appData.today.moodScore) > 0) {
+    dailyData[today] = { ...appData.today };
+  }
+
+  const allDates = Object.keys(dailyData).map((d) => new Date(d));
+  if (!allDates.length) {
+    container.innerHTML = "";
+    return;
+  }
+
+  const latestDate = new Date(Math.max(...allDates));
+  const earliestDate = new Date(Math.min(...allDates));
+
+  const mondayOfLatest = new Date(latestDate);
+  mondayOfLatest.setDate(mondayOfLatest.getDate() - ((mondayOfLatest.getDay() + 6) % 7));
+
+  const mondayOfEarliest = new Date(earliestDate);
+  mondayOfEarliest.setDate(mondayOfEarliest.getDate() - ((mondayOfEarliest.getDay() + 6) % 7));
+
+  const weeks = [];
+  for (let weekStart = new Date(mondayOfLatest); weekStart >= mondayOfEarliest; weekStart.setDate(weekStart.getDate() - 7)) {
+    weeks.push(new Date(weekStart));
+  }
+
+  container.innerHTML = "";
+
+  for (const weekStart of weeks) {
+    for (let offset = 0; offset < 7; offset++) {
+      const cellDate = new Date(weekStart);
+      cellDate.setDate(cellDate.getDate() + offset);
+      const dateKey = cellDate.toISOString().split("T")[0];
+      const data = dailyData[dateKey];
+      const score = Number(data?.moodScore) || 0;
+      const month = cellDate.toLocaleString("default", { month: "short" });
+      const day = cellDate.getDate();
+      const cell = document.createElement("div");
+      cell.className = "mood-day-cell";
+      if (score) {
+        cell.classList.add(`score-${score}`);
+      } else {
+        cell.classList.add("empty");
+      }
+
+      if (day === 1) {
+        cell.classList.add("month-start");
+        cell.dataset.month = month;
+      }
+
+      cell.dataset.score = score;
+      cell.dataset.date = dateKey;
+      cell.textContent = String(day);
+
+      const note = data?.moodNote ? data.moodNote.trim() : "";
+      const label = note ? `<p>${note}</p>` : "<p>No note saved.</p>";
+      cell.onclick = () => {
+        openReward(`
+          <div style="max-width:360px; word-break:break-word;">
+            <h3>${dateKey}</h3>
+            <p>Mood ${score || "?"}/5</p>
+            ${label}
+          </div>
+        `);
+      };
+
+      container.appendChild(cell);
+    }
+  }
+}
+function generateDummyMoodData(days = 30) {
+  if (!appData) return {};
+  appData.daily = appData.daily || {};
+  const current = new Date(today);
+
+  for (let i = days; i > 0; i--) {
+    const date = new Date(current);
+    date.setDate(current.getDate() - i);
+    const key = date.toISOString().split("T")[0];
+    if (!appData.daily[key]) {
+      const score = Math.floor(Math.random() * 5) + 1;
+      appData.daily[key] = {
+        morningQ: "",
+        ifMorningQ: false,
+        mainQ: "",
+        ifMainQ: false,
+        eveningQ: "",
+        ifEveningQ: false,
+        ifCleanUp: false,
+        ifCheckIn: false,
+        moodScore: score,
+        moodNote: `Sample mood note for ${key}`,
+        ifFoodPlan: false,
+        ifWater: false,
+        ifLimits: false,
+        ifActivityMinutes: false,
+        activityMinutes: 0,
+        weeklyTask: "",
+      };
+    }
+  }
+
+  return appData.daily;
+} /* =========================
    PLAN
 ========================= */
 
@@ -671,7 +784,7 @@ async function loadPlan() {
   // Load monthly options
   const monthlyText = await fetchFile("MonthlyTasks.md");
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  const currentMonth = monthNames[new Date().getMonth()];
+  const currentMonth = monthNames[trackerDate().getMonth()];
   const monthlyLines = monthlyText.split("\n");
   let inMonth = false;
   const monthlyTasks = [];
