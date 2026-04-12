@@ -492,7 +492,7 @@ function updateMoodButtons() {
 function changeActivityMinutes(delta) {
   appData.today.activityMinutes = Math.max(0, Math.min(1000, appData.today.activityMinutes + delta));
   appData.weekly.activityMinutes = Math.max(0, Math.min(1000, appData.weekly.activityMinutes + delta));
-
+  appData.today.ifActivityMinutes = true;
   document.getElementById("activity-minutes").textContent = appData.weekly.activityMinutes;
 }
 
