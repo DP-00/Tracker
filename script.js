@@ -163,7 +163,7 @@ async function loadApp() {
   loadCheckIn();
   renderDailyStats();
   renderRingsStats();
-  generateDummyMoodData(100);
+  // generateDummyMoodData(100);
   renderMoodChart();
   await loadPlan();
 }
