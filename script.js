@@ -163,7 +163,7 @@ async function loadApp() {
   loadCheckIn();
   renderDailyStats();
   renderRingsStats();
-  // generateDummyMoodData(100);
+  generateDummyMoodData(100);
   renderMoodChart();
   await loadPlan();
 }
@@ -520,6 +520,8 @@ async function generateReward(rewardName, rewardType) {
     content = `<img src="${url}" style="width:100%">`;
   } else if (rewardType === "citation") {
     content = await getRandomCitation();
+  } else if (rewardType === "random-img") {
+    content = `<img src="https://loremflickr.com/320/240/animal,otter/all" style="width:100%">`;
   }
   openReward(content);
 }
@@ -576,10 +578,13 @@ function renderDailyStats() {
   const t = appData.today;
   const w = appData.weekly;
 
+  if (t.ifMorningQ && t.ifMainQ && t.ifEveningQ && t.ifCleanUp && t.ifCheckIn && t.ifActivityMinutes && t.ifFoodPlan && t.ifWater && t.ifLimits) document.getElementById("daily-stats-perfect").classList.add("complete");
   if (t.ifMorningQ && t.ifMainQ && t.ifEveningQ) document.getElementById("daily-stats-quests").classList.add("complete");
-  if (t.ifCleanUp && t.ifCheckIn) document.getElementById("daily-stats-cleanUp").classList.add("complete");
+  if (t.ifCleanUp) document.getElementById("daily-stats-cleanUp").classList.add("complete");
+  if (t.ifCheckIn) document.getElementById("daily-stats-mood").classList.add("complete");
   if (t.ifActivityMinutes) document.getElementById("daily-stats-activityMinutes").classList.add("complete");
   if (t.ifFoodPlan && t.ifWater && t.ifLimits) document.getElementById("daily-stats-food").classList.add("complete");
+
   if (w.ifWt_passiveFun) document.getElementById("daily-stats-wt_passiveFun").classList.add("complete");
   if (w.ifWt_german) document.getElementById("daily-stats-wt_german").classList.add("complete");
   if (w.ifWt_sport) document.getElementById("daily-stats-wt_sport").classList.add("complete");
@@ -588,7 +593,6 @@ function renderDailyStats() {
   if (w.ifWt_activeFun) document.getElementById("daily-stats-wt_activeFun").classList.add("complete");
   if (w.ifWt_volo) document.getElementById("daily-stats-wt_volo").classList.add("complete");
 
-  document.getElementById("daily-stats-limits").textContent = `📵 ${Math.floor((new Date() - new Date(2026, 2, 22)) / (1000 * 60 * 60 * 24))}   `;
   document.getElementById("daily-stats-perfect").textContent = `   ✨ ${appData.yearly.perfectDays || 0}`;
 }
 
@@ -843,4 +847,36 @@ async function savePlan() {
   await saveFileToDropbox("EveningTasks.md", newEveningText);
 
   alert("Plan saved!");
+}
+
+// UTILS
+document.getElementById(`daily-stats`).onclick = async () => {
+  generateDayilyReport(appData);
+};
+
+function generateDayilyReport(data) {
+  const t = data.today;
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("en-GB").replace(/\//g, "/").slice(0, 10);
+
+  const check = (val) => (val ? "✓" : "✗");
+  const foodParts = [];
+  if (t.ifFoodPlan) foodParts.push("plan");
+  if (t.ifWater) foodParts.push("h2o");
+  if (t.ifLimits) foodParts.push("lim");
+  const foodLine = foodParts.join(", ");
+
+  const text = `${dateStr}
+🎯 ${check(t.ifMorningQ)} ${check(t.ifMainQ)} ${check(t.ifEveningQ)}
+🌙 ${check(t.ifCleanUp)}
+😶 ${check(t.ifCheckIn)}
+🍽 ${foodLine}
+🏃 ${data.weekly.activityMinutes}`;
+
+  navigator.clipboard
+    .writeText(text)
+    .then(() => generateReward("", "random-img"))
+    .catch((err) => console.error("Clipboard error:", err));
+
+  return;
 }
