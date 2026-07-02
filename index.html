@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tracker</title>
-    <link rel="icon" type="image/png" href="/icon-192.png" />
+    <link rel="icon" type="image/png" href="icon-192.png" />
 
     <link href="https://fonts.googleapis.com/css2?family=Noto+Emoji&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet" />
@@ -617,6 +617,17 @@
         background: #122820;
       }
 
+      .mood-day-cell.additional::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 0;
+        height: 0;
+        border-top: 12px solid rgba(255, 255, 255, 0.8);
+        border-right: 12px solid transparent;
+      }
+
       /* RINGS */
       .halfring {
         fill: none;
@@ -814,7 +825,7 @@
         </div>
       </section>
       <section class="screen active" id="stats">
-        <h2>💡 Progress</h2>
+        <h2 id="progress-header">💡 Progress</h2>
         <div id="daily-stats" class="daily-stats">
           <div id="daily-stats-perfect" class="daily-stats-item">✨0</div>
           <div id="daily-stats-quests" class="daily-stats-item">🎯</div>
