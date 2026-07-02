@@ -9,15 +9,18 @@ function trackerDate(now = new Date()) {
 
 const today = trackerDate().toISOString().split("T")[0];
 const dayOfWeek = trackerDate().toLocaleString("default", { weekday: "long" });
-const dayOfMonth = trackerDate().getDate();
+// const dayOfMonth = trackerDate().getDate();
+const dayOfMonth = 1;
+
 const dayOfYear = Math.floor((trackerDate() - new Date(trackerDate().getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
 const month = trackerDate().toLocaleString("default", { month: "short" });
+console.log(dayOfMonth == 1);
 /* =========================
    DROPBOX
 ========================= */
 
-const REDIRECT_URI = `${window.location.origin}/Tracker/`; //"http://localhost:8000/";
-// const REDIRECT_URI = "http://localhost:8000/"; //"http://localhost:8000/";
+// const REDIRECT_URI = `${window.location.origin}/Tracker/`; //"http://localhost:8000/";
+const REDIRECT_URI = "http://localhost:8000/"; //"http://localhost:8000/";
 const CLIENT_ID = "7ctgzhwolmiq6kc"; // <-- your client id
 let dbxAuth = new Dropbox.DropboxAuth({ clientId: CLIENT_ID });
 dbx = new Dropbox.Dropbox({ auth: dbxAuth });
@@ -30,39 +33,33 @@ function hasRedirectedFromAuth() {
   return !!getCodeFromUrl();
 }
 
-function doAuth() {
-  dbxAuth = new Dropbox.DropboxAuth({ clientId: CLIENT_ID });
-
-  dbxAuth
-    .getAuthenticationUrl(REDIRECT_URI, undefined, "code", "offline", undefined, undefined, true)
-    .then((authUrl) => {
-      window.sessionStorage.clear();
-      window.sessionStorage.setItem("codeVerifier", dbxAuth.codeVerifier);
-      window.location.href = authUrl;
-    })
-    .catch(console.error);
+async function doAuth(dbxAuth, REDIRECT_URI) {
+  if (dbxAuth.getAccessToken()) return true;
+  const authUrl = await dbxAuth.getAuthenticationUrl(REDIRECT_URI, undefined, "code", "offline", undefined, undefined, true);
+  const codeVerifier = dbxAuth.getCodeVerifier();
+  sessionStorage.setItem("codeVerifier", codeVerifier);
+  window.location.href = authUrl;
+  return false;
 }
-
-const fileCache = {};
 
 async function fetchFile(file) {
   const pathToFetch = `/${file}`; // All files are at app folder root
-  console.log("Fetching file:", file, "-> path:", pathToFetch);
+  // console.log("Fetching file:", file, "-> path:", pathToFetch);
 
   try {
     // List all files in the app folder for debugging
     const filesList = await dbx.filesListFolder({ path: "" });
-    console.log(
-      "Files in app folder:",
-      filesList.result.entries.map((f) => f.name),
-    );
+    // console.log(
+    //   "Files in app folder:",
+    //   filesList.result.entries.map((f) => f.name),
+    // );
 
     const response = await dbx.filesGetTemporaryLink({ path: pathToFetch });
-    console.log("Temporary link response:", response);
+    // console.log("Temporary link response:", response);
 
     const text = await (await fetch(response.result.link)).text();
-    console.log(`Loaded ${file}, length:`, text.length);
-    console.log("Content preview:", text.substring(0, 100));
+    // console.log(`Loaded ${file}, length:`, text.length);
+    // console.log("Content preview:", text.substring(0, 100));
 
     return text;
   } catch (err) {
@@ -87,59 +84,27 @@ async function saveFileToDropbox(filePath, content) {
 }
 
 /* =========================
-  UTILS
-========================= */
-
-function showScreen(id) {
-  document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-}
-
-function initTabs(sectionId) {
-  const section = document.getElementById(sectionId);
-  if (!section) return;
-
-  const buttons = section.querySelectorAll(".tab-btn[data-tab]");
-  buttons.forEach((button) => {
-    button.onclick = () => {
-      console.log(`Tab click: ${button.dataset.tab} in section ${sectionId}`);
-      const tab = button.dataset.tab;
-      buttons.forEach((btn) => btn.classList.toggle("active", btn === button));
-      section.querySelectorAll(".tab-content").forEach((content) => {
-        content.classList.toggle("active", content.dataset.tab === tab);
-      });
-    };
-  });
-}
-
-function getRandomItem(array) {
-  return array[Math.floor(Math.random() * array.length)];
-}
-
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-/* =========================
    INIT APP
 ========================= */
 
 window.onload = async function () {
-  dbxAuth = new Dropbox.DropboxAuth({ clientId: CLIENT_ID });
+  el = document.getElementById("progress-header");
+  el.style.cssText += ";filter:drop-shadow(0 0 10px #fff)";
+  setTimeout(() => (el.style.filter = ""), 1000);
 
   if (!hasRedirectedFromAuth()) {
-    doAuth();
+    await doAuth(dbxAuth, REDIRECT_URI);
     return;
   }
 
   try {
     dbxAuth.setCodeVerifier(window.sessionStorage.getItem("codeVerifier"));
-
     const tokenResponse = await dbxAuth.getAccessTokenFromCode(REDIRECT_URI, getCodeFromUrl());
-
     dbxAuth.setAccessToken(tokenResponse.result.access_token);
+    // clean URL
+    window.history.replaceState({}, document.title, window.location.pathname);
 
-    dbx = new Dropbox.Dropbox({ auth: dbxAuth });
+    // dbx = new Dropbox.Dropbox({ auth: dbxAuth });
     await loadData();
     await loadApp();
     initTabs("plan");
@@ -151,6 +116,7 @@ window.onload = async function () {
 
 async function loadData() {
   appData = JSON.parse(await fetchFile("data.json"));
+
   if (appData.lastUpdated != today) {
     await saveAndResetDay(appData.lastUpdated);
     await generateQuests();
@@ -163,7 +129,6 @@ async function loadApp() {
   loadCheckIn();
   renderDailyStats();
   renderRingsStats();
-  generateDummyMoodData(100);
   renderMoodChart();
   await loadPlan();
 }
@@ -176,11 +141,11 @@ async function saveChanges() {
 //   await saveAndResetDay();
 // };
 async function saveAndResetDay(archiveDate = today) {
+  console.log("Saving and resetting day:", archiveDate);
   const t = appData.today;
   const w = appData.weekly;
   const m = appData.monthly;
   const y = appData.yearly;
-
   // update yearly stats
   if (t.ifMorningQ && t.ifMainQ && t.ifEveningQ && t.ifCleanUp && t.ifActivityMinutes && t.ifCheckIn && t.ifFoodPlan && t.ifWater && t.ifLimits) y.perfectDays++;
   if (t.ifMorningQ && t.ifMainQ && t.ifEveningQ) y.routine++;
@@ -215,8 +180,14 @@ async function saveAndResetDay(archiveDate = today) {
 
   appData.daily[archiveDate] = { ...appData.today };
 
-  // reset weekly values if MONDAY
-  if (dayOfWeek == "Monday") {
+  const week = (d) => {
+    d = new Date(d);
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    return d.toISOString().slice(0, 10);
+  };
+  const isNewWeek = week(appData.lastUpdated) !== week(today);
+
+  if (isNewWeek) {
     appData.weekly = {
       activityMinutes: 0,
       ifWt_passiveFun: false,
@@ -229,8 +200,7 @@ async function saveAndResetDay(archiveDate = today) {
     };
   }
 
-  // reset monthly values if 1st day of month
-  if (dayOfMonth == 1) {
+  if (appData.lastUpdated?.slice(0, 7) !== today.slice(0, 7)) {
     appData.monthly = {
       routine: 0,
       cleanUp: 0,
@@ -251,6 +221,9 @@ async function saveAndResetDay(archiveDate = today) {
     ifCheckIn: false,
     moodScore: 0,
     moodNote: "",
+    moodNoteO: false,
+    moodNoteCH: false,
+    moodNoteA: false,
     ifFoodPlan: false,
     ifWater: false,
     ifLimits: false,
@@ -269,9 +242,9 @@ async function saveAndResetDay(archiveDate = today) {
 // ========================= */
 
 async function loadTask(taskType, rewardType) {
-  console.log(appData.today[`${taskType}`]);
-  console.log(appData);
-  console.log(taskType, document.getElementById(`${taskType}-btn`));
+  // console.log(appData.today[`${taskType}`]);
+  // console.log(appData);
+  // console.log(taskType, document.getElementById(`${taskType}-btn`));
   if (appData.today[`${taskType}`]) {
     document.getElementById(`${taskType}-task`).textContent = appData.today[`${taskType}`];
   }
@@ -281,7 +254,7 @@ async function loadTask(taskType, rewardType) {
   }
 
   document.getElementById(`${taskType}-btn`).onclick = async () => {
-    console.log("Clicked", taskType, "rewardType:", rewardType);
+    // console.log("Clicked", taskType, "rewardType:", rewardType);
     completeTask(taskType);
     await generateReward(taskType, rewardType);
     await saveChanges();
@@ -440,6 +413,9 @@ function loadMoodCheckIn() {
       const score = Number(button.dataset.score);
       appData.today.moodScore = score;
       appData.today.ifCheckIn = true;
+      let ifO = appData.today.moodNoteO || false;
+      let ifCH = appData.today.moodNoteCH || false;
+      let ifA = appData.today.moodNoteA || false;
       await saveChanges();
       updateMoodButtons();
       renderDailyStats();
@@ -447,6 +423,11 @@ function loadMoodCheckIn() {
       const content = `
         <div class="mood-popup">
           <h3>Mood ${score}/5</h3>
+            <div style="display:flex;gap:8px;padding:1.5rem 0;">
+              <label><input type="checkbox" id="tracker_O" ${ifO ? "checked" : ""}> O</label>
+              <label><input type="checkbox" id="tracker_CH" ${ifCH ? "checked" : ""}> CH</label>
+              <label><input type="checkbox" id="tracker_A" ${ifA ? "checked" : ""}> A</label>
+            </div>
           <textarea id="mood-note-input">${appData.today.moodNote || ""}</textarea>
           <button id="mood-note-save" class="action-btn">💾</button>
         </div>
@@ -460,6 +441,9 @@ function loadMoodCheckIn() {
       if (saveButton) {
         saveButton.onclick = async () => {
           appData.today.moodNote = document.getElementById("mood-note-input").value.trim();
+          appData.today.moodNoteO = document.getElementById("tracker_O").checked;
+          appData.today.moodNoteCH = document.getElementById("tracker_CH").checked;
+          appData.today.moodNoteA = document.getElementById("tracker_A").checked;
           await saveChanges();
           renderMoodChart();
           closeReward();
@@ -597,6 +581,8 @@ function renderDailyStats() {
 }
 
 function setRingProgress(circle, percent) {
+  percent = Math.max(0, Math.min(100, percent));
+
   const r = circle.getAttribute("r");
   const circumference = 2 * Math.PI * r;
   circle.style.strokeDasharray = circumference;
@@ -622,7 +608,7 @@ function updateAllRings(monthlyValues, yearlyValues, rainbowValues) {
   yearlyValues.forEach((val, i) => {
     const ring = document.getElementById("overlay" + (i + 1));
     const label = document.getElementById("p" + (i + 1));
-    console.log(`Updating overlay${i}: val=${val}, percent=${(val * 100).toFixed(0)}%`);
+    // console.log(`Updating overlay${i}: val=${val}, percent=${(val * 100).toFixed(0)}%`);
 
     if (i != 4) label.textContent = (val * 100).toFixed(0) + "%";
     setRingProgress(ring, val * 100);
@@ -638,6 +624,8 @@ function renderRingsStats() {
   let m = appData.monthly;
   let y = appData.yearly;
 
+  // console.log("Monthly:", m.routine / dayOfMonth, m.cleanUp / dayOfMonth, m.foodPlan / dayOfMonth, m.activityMinutes / ((dayOfMonth * 333) / 7));
+
   updateAllRings(
     [m.routine / dayOfMonth, m.cleanUp / dayOfMonth, m.foodPlan / dayOfMonth, m.activityMinutes / ((dayOfMonth * 333) / 7)],
 
@@ -646,6 +634,7 @@ function renderRingsStats() {
     [(y?.wt_volo * 7) / dayOfYear, (y?.wt_activeFun * 7) / dayOfYear, (y?.wt_monthlyGoals * 7) / dayOfYear, (y?.wt_psychology * 7) / dayOfYear, (y?.wt_sport * 7) / dayOfYear, (y?.wt_german * 7) / dayOfYear, (y?.wt_passiveFun * 7) / dayOfYear],
   );
 }
+
 function renderMoodChart() {
   const container = document.getElementById("mood-chart");
   if (!container) return;
@@ -683,7 +672,10 @@ function renderMoodChart() {
       cellDate.setDate(cellDate.getDate() + offset);
       const dateKey = cellDate.toISOString().split("T")[0];
       const data = dailyData[dateKey];
-      const score = Number(data?.moodScore) || 0;
+      const score = data?.moodScore;
+      const ifO = Number(data?.moodNoteO) || 0;
+      const ifCH = Number(data?.moodNoteCH) || 0;
+      const ifA = Number(data?.moodNoteA) || 0;
       const month = cellDate.toLocaleString("default", { month: "short" });
       const day = cellDate.getDate();
       const cell = document.createElement("div");
@@ -692,6 +684,10 @@ function renderMoodChart() {
         cell.classList.add(`score-${score}`);
       } else {
         cell.classList.add("empty");
+      }
+
+      if (ifO || ifCH || ifA) {
+        cell.classList.add("additional");
       }
 
       if (day === 1) {
@@ -709,6 +705,11 @@ function renderMoodChart() {
         openReward(`
           <div style="max-width:360px; word-break:break-word;">
             <h3>${dateKey}</h3>
+            <div style="display:flex;gap:8px;padding:1.5rem 0;">
+              <label><input type="checkbox" disabled ${ifO ? "checked" : ""}> O</label>
+              <label><input type="checkbox" disabled ${ifCH ? "checked" : ""}> CH</label>
+              <label><input type="checkbox" disabled ${ifA ? "checked" : ""}> A</label>
+            </div>
             <p>Mood ${score || "?"}/5</p>
             ${label}
           </div>
@@ -719,40 +720,8 @@ function renderMoodChart() {
     }
   }
 }
-function generateDummyMoodData(days = 30) {
-  if (!appData) return {};
-  appData.daily = appData.daily || {};
-  const current = new Date(today);
 
-  for (let i = days; i > 0; i--) {
-    const date = new Date(current);
-    date.setDate(current.getDate() - i);
-    const key = date.toISOString().split("T")[0];
-    if (!appData.daily[key]) {
-      const score = Math.floor(Math.random() * 5) + 1;
-      appData.daily[key] = {
-        morningQ: "",
-        ifMorningQ: false,
-        mainQ: "",
-        ifMainQ: false,
-        eveningQ: "",
-        ifEveningQ: false,
-        ifCleanUp: false,
-        ifCheckIn: false,
-        moodScore: score,
-        moodNote: `Sample mood note for ${key}`,
-        ifFoodPlan: false,
-        ifWater: false,
-        ifLimits: false,
-        ifActivityMinutes: false,
-        activityMinutes: 0,
-        weeklyTask: "",
-      };
-    }
-  }
-
-  return appData.daily;
-} /* =========================
+/* =========================
    PLAN
 ========================= */
 
@@ -879,4 +848,38 @@ function generateDayilyReport(data) {
     .catch((err) => console.error("Clipboard error:", err));
 
   return;
+}
+
+/* =========================
+  UTILS
+========================= */
+
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+function initTabs(sectionId) {
+  const section = document.getElementById(sectionId);
+  if (!section) return;
+
+  const buttons = section.querySelectorAll(".tab-btn[data-tab]");
+  buttons.forEach((button) => {
+    button.onclick = () => {
+      // console.log(`Tab click: ${button.dataset.tab} in section ${sectionId}`);
+      const tab = button.dataset.tab;
+      buttons.forEach((btn) => btn.classList.toggle("active", btn === button));
+      section.querySelectorAll(".tab-content").forEach((content) => {
+        content.classList.toggle("active", content.dataset.tab === tab);
+      });
+    };
+  });
+}
+
+function getRandomItem(array) {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }
