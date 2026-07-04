@@ -9,12 +9,10 @@ function trackerDate(now = new Date()) {
 
 const today = trackerDate().toISOString().split("T")[0];
 const dayOfWeek = trackerDate().toLocaleString("default", { weekday: "long" });
-// const dayOfMonth = trackerDate().getDate();
-const dayOfMonth = 1;
+const dayOfMonth = trackerDate().getDate();
 
 const dayOfYear = Math.floor((trackerDate() - new Date(trackerDate().getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
 const month = trackerDate().toLocaleString("default", { month: "short" });
-console.log(dayOfMonth == 1);
 /* =========================
    DROPBOX
 ========================= */
@@ -103,8 +101,6 @@ window.onload = async function () {
     dbxAuth.setAccessToken(tokenResponse.result.access_token);
     // clean URL
     window.history.replaceState({}, document.title, window.location.pathname);
-
-    // dbx = new Dropbox.Dropbox({ auth: dbxAuth });
     await loadData();
     await loadApp();
     initTabs("plan");
@@ -124,6 +120,7 @@ async function loadData() {
 }
 
 async function loadApp() {
+  console.log("Loading app for date:", today);
   loadQuests();
   loadCleanUpTasks();
   loadCheckIn();
@@ -229,7 +226,6 @@ async function saveAndResetDay(archiveDate = today) {
     ifLimits: false,
     ifActivityMinutes: false,
     activityMinutes: 0,
-    weeklyTask: "",
   };
 
   appData.lastUpdated = today;
@@ -623,8 +619,6 @@ function updateAllRings(monthlyValues, yearlyValues, rainbowValues) {
 function renderRingsStats() {
   let m = appData.monthly;
   let y = appData.yearly;
-
-  // console.log("Monthly:", m.routine / dayOfMonth, m.cleanUp / dayOfMonth, m.foodPlan / dayOfMonth, m.activityMinutes / ((dayOfMonth * 333) / 7));
 
   updateAllRings(
     [m.routine / dayOfMonth, m.cleanUp / dayOfMonth, m.foodPlan / dayOfMonth, m.activityMinutes / ((dayOfMonth * 333) / 7)],
