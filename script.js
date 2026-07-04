@@ -146,13 +146,15 @@ async function saveAndResetDay(archiveDate = today) {
   // update yearly stats
   if (t.ifMorningQ && t.ifMainQ && t.ifEveningQ && t.ifCleanUp && t.ifActivityMinutes && t.ifCheckIn && t.ifFoodPlan && t.ifWater && t.ifLimits) y.perfectDays++;
   if (t.ifMorningQ && t.ifMainQ && t.ifEveningQ) y.routine++;
-  if (t.ifCleanUp && t.ifCheckIn) y.cleanUp++;
+  if (t.ifCleanUp) y.cleanUp++;
+  if (t.ifCheckIn) y.checkIn++;
   if (t.ifFoodPlan && t.ifWater && t.ifLimits) y.foodPlan++;
   if (t.ifActivityMinutes) y.activityMinutes = y.activityMinutes + t.activityMinutes;
 
   // update monthly stats
   if (t.ifMorningQ && t.ifMainQ && t.ifEveningQ) m.routine++;
-  if (t.ifCleanUp && t.ifCheckIn) m.cleanUp++;
+  if (t.ifCleanUp) m.cleanUp++;
+  if (t.ifCheckIn) m.checkIn++;
   if (t.ifFoodPlan && t.ifWater && t.ifLimits) m.foodPlan++;
   if (t.ifActivityMinutes) m.activityMinutes = m.activityMinutes + t.activityMinutes;
 
@@ -201,6 +203,7 @@ async function saveAndResetDay(archiveDate = today) {
     appData.monthly = {
       routine: 0,
       cleanUp: 0,
+      checkIn: 0,
       foodPlan: 0,
       activityMinutes: 0,
     };
