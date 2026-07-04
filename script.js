@@ -13,6 +13,7 @@ const dayOfMonth = trackerDate().getDate();
 
 const dayOfYear = Math.floor((trackerDate() - new Date(trackerDate().getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
 const month = trackerDate().toLocaleString("default", { month: "short" });
+
 /* =========================
    DROPBOX
 ========================= */
