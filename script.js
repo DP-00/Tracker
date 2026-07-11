@@ -812,7 +812,8 @@ async function savePlan() {
     newEveningText += `[${day}] ${task}\n`;
   }
   await saveFileToDropbox("EveningTasks.md", newEveningText);
-
+  appData.today.eveningQ = weeklyAssignments[dayOfWeek] || "";
+  saveChanges();
   alert("Plan saved!");
 }
 
