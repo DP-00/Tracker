@@ -1,5 +1,15 @@
+import { getCodeFromUrl, hasRedirectedFromAuth, doAuth, fetchFile, saveFileToDropbox } from "./dropbox.js";
+import { initActionPlan } from "./action-plan.js";
+
+const REDIRECT_URI = `${window.location.origin}/Tracker/`; //"http://localhost:8000/";
+// const REDIRECT_URI = "http://localhost:8000/"; //"http://localhost:8000/";
+const CLIENT_ID = "7ctgzhwolmiq6kc"; // <-- your client id
+let dbxAuth = new Dropbox.DropboxAuth({ clientId: CLIENT_ID });
+let dbx = new Dropbox.Dropbox({ auth: dbxAuth });
+
 let appData = null;
-let isDayLoaded = false;
+let rewardLockedUntil = 0;
+let randomTools = [];
 
 function trackerDate(now = new Date()) {
   const d = new Date(now);
@@ -10,84 +20,15 @@ function trackerDate(now = new Date()) {
 const today = trackerDate().toISOString().split("T")[0];
 const dayOfWeek = trackerDate().toLocaleString("default", { weekday: "long" });
 const dayOfMonth = trackerDate().getDate();
-
 const dayOfYear = Math.floor((trackerDate() - new Date(trackerDate().getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
 const month = trackerDate().toLocaleString("default", { month: "short" });
-
-/* =========================
-   DROPBOX
-========================= */
-
-const REDIRECT_URI = `${window.location.origin}/Tracker/`; //"http://localhost:8000/";
-// const REDIRECT_URI = "http://localhost:8000/"; //"http://localhost:8000/";
-const CLIENT_ID = "7ctgzhwolmiq6kc"; // <-- your client id
-let dbxAuth = new Dropbox.DropboxAuth({ clientId: CLIENT_ID });
-dbx = new Dropbox.Dropbox({ auth: dbxAuth });
-
-function getCodeFromUrl() {
-  return new URLSearchParams(window.location.search).get("code");
-}
-
-function hasRedirectedFromAuth() {
-  return !!getCodeFromUrl();
-}
-
-async function doAuth(dbxAuth, REDIRECT_URI) {
-  if (dbxAuth.getAccessToken()) return true;
-  const authUrl = await dbxAuth.getAuthenticationUrl(REDIRECT_URI, undefined, "code", "offline", undefined, undefined, true);
-  const codeVerifier = dbxAuth.getCodeVerifier();
-  sessionStorage.setItem("codeVerifier", codeVerifier);
-  window.location.href = authUrl;
-  return false;
-}
-
-async function fetchFile(file) {
-  const pathToFetch = `/${file}`; // All files are at app folder root
-  // console.log("Fetching file:", file, "-> path:", pathToFetch);
-
-  try {
-    // List all files in the app folder for debugging
-    const filesList = await dbx.filesListFolder({ path: "" });
-    // console.log(
-    //   "Files in app folder:",
-    //   filesList.result.entries.map((f) => f.name),
-    // );
-
-    const response = await dbx.filesGetTemporaryLink({ path: pathToFetch });
-    // console.log("Temporary link response:", response);
-
-    const text = await (await fetch(response.result.link)).text();
-    // console.log(`Loaded ${file}, length:`, text.length);
-    // console.log("Content preview:", text.substring(0, 100));
-
-    return text;
-  } catch (err) {
-    console.error("Error fetching file:", file, err);
-    return "";
-  }
-}
-
-async function saveFileToDropbox(filePath, content) {
-  try {
-    const uploadPath = filePath.startsWith("/") ? filePath : "/" + filePath;
-
-    await dbx.filesUpload({
-      path: uploadPath,
-      mode: "overwrite",
-      contents: content,
-    });
-    console.log("✅ Saved " + uploadPath + " to Dropbox!");
-  } catch (err) {
-    console.error("❌ Dropbox save failed for " + filePath, err);
-  }
-}
 
 /* =========================
    INIT APP
 ========================= */
 
 window.onload = async function () {
-  el = document.getElementById("progress-header");
+  let el = document.getElementById("progress-header");
   el.style.cssText += ";filter:drop-shadow(0 0 10px #fff)";
   setTimeout(() => (el.style.filter = ""), 1000);
 
@@ -104,7 +45,7 @@ window.onload = async function () {
     window.history.replaceState({}, document.title, window.location.pathname);
     await loadData();
     await loadApp();
-    initTabs("plan");
+    initTabs("action-plan");
     initTabs("stats");
   } catch (error) {
     console.error("Auth error:", error);
@@ -112,12 +53,15 @@ window.onload = async function () {
 };
 
 async function loadData() {
-  appData = JSON.parse(await fetchFile("data.json"));
+  appData = JSON.parse(await fetchFile(dbx, "data.json"));
 
   if (appData.lastUpdated != today) {
     await saveAndResetDay(appData.lastUpdated);
     await generateQuests();
   }
+
+  // ensurer as sometimes they were missing
+  if (!appData.today?.morningQ?.trim() || !appData.today?.mainQ?.trim() || !appData.today?.eveningQ?.trim()) await generateQuests();
 }
 
 async function loadApp() {
@@ -128,16 +72,14 @@ async function loadApp() {
   renderDailyStats();
   renderRingsStats();
   renderMoodChart();
-  await loadPlan();
+  await Promise.all([loadPlan(), loadTools()]);
+  await initActionPlan(appData, dbx);
 }
 
 async function saveChanges() {
-  await saveFileToDropbox("data.json", JSON.stringify(appData, null, 2));
+  await saveFileToDropbox(dbx, "data.json", JSON.stringify(appData, null, 2));
 }
 
-// document.getElementById("save-day").onclick = async () => {
-//   await saveAndResetDay();
-// };
 async function saveAndResetDay(archiveDate = today) {
   console.log("Saving and resetting day:", archiveDate);
   const t = appData.today;
@@ -178,6 +120,7 @@ async function saveAndResetDay(archiveDate = today) {
     }
   }
 
+  delete appData.today.worryBox;
   appData.daily[archiveDate] = { ...appData.today };
 
   const week = (d) => {
@@ -210,7 +153,6 @@ async function saveAndResetDay(archiveDate = today) {
     };
   }
 
-  // Reset daily values
   appData.today = {
     morningQ: "",
     ifMorningQ: false,
@@ -234,7 +176,7 @@ async function saveAndResetDay(archiveDate = today) {
 
   appData.lastUpdated = today;
 
-  await saveFileToDropbox("data.json", JSON.stringify(appData, null, 2));
+  await saveFileToDropbox(dbx, "data.json", JSON.stringify(appData, null, 2));
 }
 
 // /* =========================
@@ -246,7 +188,13 @@ async function loadTask(taskType, rewardType) {
   // console.log(appData);
   // console.log(taskType, document.getElementById(`${taskType}-btn`));
   if (appData.today[`${taskType}`]) {
-    document.getElementById(`${taskType}-task`).textContent = appData.today[`${taskType}`];
+    const taskElement = document.getElementById(`${taskType}-task`);
+    const taskText = appData.today[`${taskType}`];
+    if (taskText.includes("[")) {
+      renderLinkTask(taskElement, taskText);
+    } else {
+      taskElement.textContent = taskText;
+    }
   }
 
   if (appData.today[`if${capitalize(taskType)}`]) {
@@ -259,6 +207,24 @@ async function loadTask(taskType, rewardType) {
     await generateReward(taskType, rewardType);
     await saveChanges();
   };
+}
+
+function renderLinkTask(element, text) {
+  const match = text.match(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/);
+  if (!match) {
+    element.textContent = text;
+    return;
+  }
+
+  const beforeLink = text.slice(0, match.index);
+  const afterLink = text.slice(match.index + match[0].length);
+  const link = document.createElement("a");
+  link.href = match[2];
+  link.textContent = match[1];
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.addEventListener("click", (event) => event.stopPropagation());
+  element.replaceChildren(document.createTextNode(beforeLink), link, document.createTextNode(afterLink));
 }
 
 function completeTask(taskType) {
@@ -283,13 +249,19 @@ async function loadQuests() {
 }
 
 async function generateMorningQuest() {
-  const text = await fetchFile("MorningTasks.md");
+  const text = await fetchFile(dbx, "MorningTasks.md");
   const tasks = text.split("\n").filter((line) => line.trim());
   appData.today[`morningQ`] = getRandomItem(tasks);
 }
 
 async function generateMainQuest() {
-  const text = await fetchFile("MonthlyTasks.md");
+  const assignedTask = appData.plan?.monthlyAssignments?.[dayOfWeek];
+  if (assignedTask) {
+    appData.today.mainQ = assignedTask;
+    return;
+  }
+
+  const text = await fetchFile(dbx, "MonthlyTasks.md");
   const lines = text.split("\n");
   const currentMonth = trackerDate().toLocaleString("default", {
     month: "long",
@@ -309,7 +281,7 @@ async function generateMainQuest() {
 }
 
 async function generateEveningQuest() {
-  const text = await fetchFile("EveningTasks.md");
+  const text = await fetchFile(dbx, "EveningTasks.md");
   const tasks = text.split("\n").filter((line) => line.trim());
 
   for (const t of tasks) {
@@ -328,7 +300,7 @@ async function generateEveningQuest() {
 ========================= */
 
 async function loadCleanUpTasks() {
-  const text = await fetchFile("CleanUpTasks.md");
+  const text = await fetchFile(dbx, "CleanUpTasks.md");
   const lines = text.split("\n");
 
   const list = document.getElementById("evening-list");
@@ -447,6 +419,13 @@ function loadMoodCheckIn() {
           await saveChanges();
           renderMoodChart();
           closeReward();
+
+          if (score === 1 || score === 2) {
+            showScreen("action-plan");
+            const tab = score === 1 ? "tools" : "action";
+            document.querySelector(`#action-plan .tab-btn[data-tab="${tab}"]`).click();
+            if (score === 1) openRandomTool();
+          }
         };
       }
     };
@@ -511,7 +490,7 @@ async function generateReward(rewardName, rewardType) {
 }
 
 async function getRandomCitation() {
-  const text = await fetchFile("Cytaty.md");
+  const text = await fetchFile(dbx, "Cytaty.md");
   const lines = text.split("\n");
   const citations = lines.filter((line) => line.trim().startsWith("-")).map((line) => line.trim().substring(1).trim());
   return getRandomItem(citations);
@@ -552,8 +531,11 @@ function openReward(content) {
 }
 
 function closeReward() {
+  if (Date.now() < rewardLockedUntil) return;
   document.getElementById("reward-popup").classList.remove("active");
 }
+
+window.closeReward = closeReward;
 
 /* =========================
    STATS
@@ -727,34 +709,21 @@ async function loadPlan() {
   const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
   // Load weekly options and assignments
-  const eveningText = await fetchFile("EveningTasks.md");
+  const [eveningText, monthlyText] = await Promise.all([fetchFile(dbx, "EveningTasks.md"), fetchFile(dbx, "MonthlyTasks.md")]);
   const eveningLines = eveningText.split("\n").filter((line) => line.trim());
   const eveningTasks = eveningLines.map((line) => {
     const match = line.match(/\[.*?\]\s*(.*)/);
     return match ? match[1] : line;
   });
 
-  // Populate weekly selects
-  document.querySelectorAll("#weekly-tab .task-select").forEach((select) => {
-    select.innerHTML = '<option value="">None</option>';
-    eveningTasks.forEach((task) => {
-      const option = document.createElement("option");
-      option.value = task;
-      option.textContent = task;
-      select.appendChild(option);
-    });
-
-    // Set current assignment
-    const day = select.dataset.day;
+  const weeklyAssignments = {};
+  days.forEach((day) => {
     const currentLine = eveningLines.find((line) => line.startsWith(`[${day}]`));
-    if (currentLine) {
-      const match = currentLine.match(/\[.*?\]\s*(.*)/);
-      if (match) select.value = match[1];
-    }
+    const match = currentLine?.match(/\[.*?\]\s*(.*)/);
+    if (match && match[1] !== "None") weeklyAssignments[day] = match[1];
   });
 
   // Load monthly options
-  const monthlyText = await fetchFile("MonthlyTasks.md");
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const currentMonth = monthNames[trackerDate().getMonth()];
   const monthlyLines = monthlyText.split("\n");
@@ -770,54 +739,254 @@ async function loadPlan() {
     }
   }
 
-  // Populate monthly and food days with weekdays
-  const containers = ["#monthly-tab .plan-days", "#food-tab .plan-days"];
-  containers.forEach((selector) => {
-    const container = document.querySelector(selector);
-    container.innerHTML = "";
+  const createDaySelectors = (container, tasks, assignments, planType) => {
+    const daysContainer = document.createElement("div");
+    daysContainer.className = "plan-days";
+    container.appendChild(daysContainer);
     days.forEach((day) => {
       const dayDiv = document.createElement("div");
       dayDiv.className = "plan-day";
       dayDiv.innerHTML = `<span>${day.slice(0, 3)}</span><select class="task-select" data-day="${day}"></select>`;
-      container.appendChild(dayDiv);
-
+      daysContainer.appendChild(dayDiv);
       const select = dayDiv.querySelector(".task-select");
       select.innerHTML = '<option value="">None</option>';
-      if (selector === "#monthly-tab .plan-days") {
-        monthlyTasks.forEach((task) => {
-          const option = document.createElement("option");
-          option.value = task;
-          option.textContent = task;
-          select.appendChild(option);
-        });
-      }
-      // For food, no additional options
+      tasks.forEach((task) => {
+        const option = document.createElement("option");
+        option.value = task;
+        option.textContent = task;
+        select.appendChild(option);
+      });
+      select.value = assignments[day] || "";
     });
-  });
+    const saveButton = document.createElement("button");
+    saveButton.className = "load-btn";
+    saveButton.textContent = "Save Plan";
+    saveButton.onclick = () => savePlan(planType);
+    container.appendChild(saveButton);
+  };
 
-  document.getElementById("save-plan").addEventListener("click", savePlan);
+  const mainQuestTask = document.getElementById("mainQ-task");
+  const weeklyQuestTask = document.getElementById("eveningQ-task");
+  mainQuestTask.onclick = () => openQuestPlan("monthly", "Main Quest", monthlyTasks, appData.plan?.monthlyAssignments || {}, createDaySelectors);
+  weeklyQuestTask.onclick = () => openQuestPlan("weekly", "Weekly Quest", eveningTasks, weeklyAssignments, createDaySelectors);
+  [mainQuestTask, weeklyQuestTask].forEach((task) => {
+    task.onkeydown = (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        task.click();
+      }
+    };
+  });
 }
 
-async function savePlan() {
-  // Save weekly
-  const weeklyAssignments = {};
-  document.querySelectorAll("#weekly-tab .task-select").forEach((select) => {
-    const day = select.dataset.day;
-    weeklyAssignments[day] = select.value;
+async function loadTools() {
+  const toolsList = document.getElementById("tools-list");
+  const randomButton = document.getElementById("random-tool");
+  let tools = [];
+  try {
+    const entries = (await dbx.filesListFolder({ path: "/tools" })).result.entries.filter((entry) => entry[".tag"] === "file");
+    tools = entries.filter((entry) => /\.(png|jpe?g|svg|mp3|mp4)$/i.test(entry.name)).slice(0, 12);
+  } catch (error) {
+    console.error("Error loading tools:", error);
+  }
+
+  document.getElementById("mood-lifter-tool").onclick = openMoodLifter;
+  document.getElementById("worry-tool").onclick = openWorryBox;
+  document.getElementById("seven-minute-tool").onclick = openSevenMinuteBreathing;
+  document.getElementById("breathing-tool").onclick = openBreathing;
+
+  randomTools = tools.filter((tool) => tool.name.toLowerCase() !== "seven-minute-tool");
+
+  tools.forEach((tool) => {
+    const button = document.createElement("button");
+    button.className = "tool-btn";
+    button.type = "button";
+    button.textContent = tool.name.replace(/\.[^.]+$/, "");
+    button.onclick = () => openTool(tool);
+    toolsList.appendChild(button);
   });
 
-  let newEveningText = "";
-  for (const day of ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]) {
-    const task = weeklyAssignments[day] || "None";
-    newEveningText += `[${day}] ${task}\n`;
+  randomButton.onclick = openRandomTool;
+  randomButton.disabled = !randomTools.length;
+}
+
+function openRandomTool() {
+  if (randomTools.length) openTool(randomTools[Math.floor(Math.random() * randomTools.length)]);
+}
+
+async function openMoodLifter() {
+  const text = await fetchFile(dbx, "actionPlan/ml.md");
+  const tasks = text
+    .split(/\r?\n/)
+    .map((line) => {
+      const match = line.trim().match(/^-\s*([123])(INT|IN|OUT)([-+=])\s+(.+)$/);
+      return match ? { lightning: match[1], location: match[2], people: match[3], text: match[4].trim() } : null;
+    })
+    .filter(Boolean);
+
+  if (!tasks.length) {
+    openReward('<div class="tool-modal"><h3>Mood Lifter</h3><p>No Mood Lifter tasks found.</p><button id="tool-close" class="action-btn modal-close-btn" type="button">✔︎</button></div>');
+    document.getElementById("tool-close").onclick = closeReward;
+    return;
   }
-  await saveFileToDropbox("EveningTasks.md", newEveningText);
-  appData.today.eveningQ = weeklyAssignments[dayOfWeek] || "";
-  saveChanges();
+
+  const filterValues = { lightning: ["1", "2", "3"], location: ["IN", "OUT"], people: ["-", "+"] };
+  const selected = { lightning: new Set(filterValues.lightning), location: new Set(filterValues.location), people: new Set(filterValues.people) };
+  let amount = "1";
+
+  const render = () => {
+    const matchingTasks = tasks.filter((task) => selected.lightning.has(task.lightning) && (selected.location.has(task.location) || task.location === "INT") && (selected.people.has(task.people) || task.people === "="));
+    const count = amount === "all" ? matchingTasks.length : Math.min(Number(amount), matchingTasks.length);
+    const remainingTasks = [...matchingTasks];
+    const displayedTasks =
+      amount === "all"
+        ? matchingTasks
+        : Array.from({ length: count }, () => {
+            const task = getRandomItem(remainingTasks);
+            remainingTasks.splice(remainingTasks.indexOf(task), 1);
+            return task;
+          });
+    const taskList = displayedTasks.length ? displayedTasks.map((task) => `<li>${task.text}</li>`).join("") : "<li>No matching tasks.</li>";
+    const content = document.getElementById("reward-content");
+    const options = (dimension, values, type = "checkbox") => values.map((value) => `<label><input type="${type}" name="mood-${dimension}" data-dimension="${dimension}" data-filter="${value}">${value}</label>`).join("");
+    content.innerHTML = `<div class="tool-modal mood-lifter-modal"><h3>Mood Lifter</h3><div class="mood-lifter-filters"><fieldset><legend>⚡</legend>${options("lightning", filterValues.lightning)}</fieldset><fieldset><legend>📍</legend>${options("location", filterValues.location)}</fieldset><fieldset><legend>👥</legend>${options("people", filterValues.people)}</fieldset><fieldset><legend>Tasks</legend>${options("amount", ["1", "3", "all"], "radio")}</fieldset></div><ul class="mood-lifter-list">${taskList}</ul><div class="mood-lifter-actions"><button id="mood-lifter-random" class="action-btn" type="button">🎲</button><button id="tool-close" class="action-btn modal-close-btn" type="button">✔︎</button></div></div>`;
+    content.querySelectorAll("input[data-filter]").forEach((input) => {
+      input.checked = input.dataset.filter === amount || selected[input.dataset.dimension]?.has(input.dataset.filter);
+      input.onchange = () => {
+        if (input.dataset.dimension === "amount") amount = input.dataset.filter;
+        else if (input.checked) selected[input.dataset.dimension].add(input.dataset.filter);
+        else selected[input.dataset.dimension].delete(input.dataset.filter);
+        render();
+      };
+    });
+    document.getElementById("mood-lifter-random").onclick = render;
+    document.getElementById("tool-close").onclick = closeReward;
+  };
+
+  openReward('<div class="tool-modal mood-lifter-modal"><h3>Loading Mood Lifter...</h3></div>');
+  render();
+}
+
+async function openTool(tool) {
+  const response = await dbx.filesGetTemporaryLink({ path: tool.path_display });
+  const extension = tool.name.split(".").pop().toLowerCase();
+  const mediaTag = extension === "mp3" ? "audio" : extension === "mp4" ? "video" : "img";
+  openReward(`
+    <div class="tool-modal">
+      <h3>${tool.name.replace(/\.[^.]+$/, "")}</h3>
+      <${mediaTag} id="tool-media" src="${response.result.link}" controls></${mediaTag}>
+      <button id="tool-close" class="action-btn modal-close-btn" type="button">✔︎</button>
+    </div>
+  `);
+  document.getElementById("tool-close").onclick = closeReward;
+}
+
+async function openSevenMinuteBreathing() {
+  const response = await dbx.filesGetTemporaryLink({ path: "/tools/test1.mp3" });
+  const duration = 7 * 60;
+  rewardLockedUntil = Date.now() + duration * 1000;
+  openReward(`
+    <div class="tool-modal breathing-modal">
+      <h3>7m</h3>
+      <div class="breathing-ring" aria-label="Breathing animation"><span></span><span></span><span></span></div>
+      <audio id="breathing-audio" src="${response.result.link}" autoplay loop></audio>
+      <button id="breathing-close" class="action-btn modal-close-btn" type="button" disabled>07:00</button>
+    </div>
+  `);
+
+  const closeButton = document.getElementById("breathing-close");
+  const timer = closeButton;
+  const updateTimer = () => {
+    const remaining = Math.max(0, Math.ceil((rewardLockedUntil - Date.now()) / 1000));
+    timer.textContent = `${String(Math.floor(remaining / 60)).padStart(2, "0")}:${String(remaining % 60).padStart(2, "0")}`;
+    if (!remaining) {
+      rewardLockedUntil = 0;
+      document.getElementById("breathing-audio").pause();
+      document.getElementById("breathing-audio").currentTime = 0;
+      closeButton.disabled = false;
+      closeButton.textContent = "✔︎";
+      closeButton.onclick = closeReward;
+      return;
+    }
+    window.setTimeout(updateTimer, 1000);
+  };
+  updateTimer();
+  document
+    .getElementById("breathing-audio")
+    .play()
+    .catch(() => {});
+}
+
+function openBreathing() {
+  const duration = 15 * 60;
+  const endTime = Date.now() + duration * 1000;
+  openReward(`
+    <div class="tool-modal breathing-modal silent-breathing-modal">
+      <h3>Breathing</h3>
+      <div class="single-breathing-ring" aria-label="Breathing animation">
+        <span id="silent-breathing-time">15:00</span>
+      </div>
+      <button id="silent-breathing-close" class="action-btn modal-close-btn" type="button">✔︎</button>
+    </div>
+  `);
+
+  const timer = document.getElementById("silent-breathing-time");
+  const updateTimer = () => {
+    const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+    timer.textContent = `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")}`;
+    if (remaining) window.setTimeout(updateTimer, 1000);
+  };
+  updateTimer();
+  document.getElementById("silent-breathing-close").onclick = closeReward;
+}
+
+function openWorryBox() {
+  openReward(`
+    <div class="tool-modal worry-modal">
+      <h3>Worry Box</h3>
+      <textarea id="worry-box-input" placeholder="Write it down...">${appData.today.worryBox || ""}</textarea>
+      <button id="worry-box-save" class="action-btn modal-close-btn" type="button">✔︎</button>
+    </div>
+  `);
+  const input = document.getElementById("worry-box-input");
+  input.focus();
+  document.getElementById("worry-box-save").onclick = async () => {
+    appData.today.worryBox = input.value.trim();
+    await saveChanges();
+    closeReward();
+  };
+}
+
+function openQuestPlan(planType, title, tasks, assignments, createDaySelectors) {
+  openReward(`<div id="quest-plan-modal" data-plan-type="${planType}"><h3>${title}</h3></div>`);
+  createDaySelectors(document.getElementById("quest-plan-modal"), tasks, assignments, planType);
+}
+
+async function savePlan(planType) {
+  const assignments = {};
+  document.querySelectorAll("#quest-plan-modal .task-select").forEach((select) => {
+    assignments[select.dataset.day] = select.value;
+  });
+
+  if (planType === "weekly") {
+    let newEveningText = "";
+    for (const day of ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]) {
+      newEveningText += `[${day}] ${assignments[day] || "None"}\n`;
+    }
+    await saveFileToDropbox(dbx, "EveningTasks.md", newEveningText);
+    appData.today.eveningQ = assignments[dayOfWeek] || "";
+  } else {
+    appData.plan = { ...(appData.plan || {}), monthlyAssignments: assignments };
+    appData.today.mainQ = assignments[dayOfWeek] || "";
+  }
+  await saveChanges();
+  closeReward();
   alert("Plan saved!");
 }
 
-// UTILS
+/* =========================
+  UTILS
+========================= */
 document.getElementById(`daily-stats`).onclick = async () => {
   generateDayilyReport(appData);
 };
@@ -849,14 +1018,12 @@ function generateDayilyReport(data) {
   return;
 }
 
-/* =========================
-  UTILS
-========================= */
-
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 }
+
+window.showScreen = showScreen;
 
 function initTabs(sectionId) {
   const section = document.getElementById(sectionId);
