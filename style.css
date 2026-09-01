@@ -1058,7 +1058,7 @@ svg {
 .thermometer-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10rem 6rem;
+  gap: 6rem 6rem;
   max-width: 75vw;
   margin: 4rem auto 0;
 }
@@ -1079,7 +1079,7 @@ svg {
   flex-direction: column;
   align-items: center;
   gap: 0;
-  height: 23rem;
+  height: 20rem;
 }
 
 .thermometer-max,
@@ -1090,9 +1090,9 @@ svg {
   line-height: 1;
   text-align: center;
   text-shadow:
+    0 0 0.1rem #fff,
     0 0 0.2rem #fff,
-    0 0 0.5rem #fff,
-    0 0 1rem rgba(255, 255, 255, 0.55);
+    0 0 1rem rgba(168, 168, 168, 0.623);
 }
 
 .thermometer-value {
@@ -1234,14 +1234,12 @@ svg {
 
 .draw-toggle-btn,
 .clear-drawing-btn {
-  min-width: 4rem;
   margin: 1rem auto;
   padding: 0.8rem 1.4rem;
-  border: 1px solid var(--grey2);
+  border: 0;
   border-radius: 0.5rem;
   background: var(--blue-dark);
   color: var(--grey3);
   cursor: pointer;
   font-size: 2.2rem;
-  line-height: 1;
 }
