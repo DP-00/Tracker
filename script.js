@@ -746,8 +746,13 @@ async function loadPlan() {
     days.forEach((day) => {
       const dayDiv = document.createElement("div");
       dayDiv.className = "plan-day";
-      dayDiv.innerHTML = `<span>${day.slice(0, 3)}</span><select class="task-select" data-day="${day}"></select>`;
+      const taskControl = planType === "monthly" ? `<input class="task-input" type="text" data-day="${day}" aria-label="${day} task">` : `<select class="task-select" data-day="${day}"></select>`;
+      dayDiv.innerHTML = `<span>${day.slice(0, 3)}</span>${taskControl}`;
       daysContainer.appendChild(dayDiv);
+      if (planType === "monthly") {
+        dayDiv.querySelector(".task-input").value = assignments[day] || tasks[0] || "";
+        return;
+      }
       const select = dayDiv.querySelector(".task-select");
       select.innerHTML = '<option value="">None</option>';
       tasks.forEach((task) => {
@@ -820,7 +825,7 @@ async function openMoodLifter() {
     .split(/\r?\n/)
     .map((line) => {
       const match = line.trim().match(/^-\s*([123])(INT|IN|OUT)([-+=])\s+(.+)$/);
-      return match ? { lightning: match[1], location: match[2], people: match[3], text: match[4].trim() } : null;
+      return match ? { energy: match[1], location: match[2], people: match[3], text: match[4].trim() } : null;
     })
     .filter(Boolean);
 
@@ -830,16 +835,18 @@ async function openMoodLifter() {
     return;
   }
 
-  const filterValues = { lightning: ["1", "2", "3"], location: ["IN", "OUT"], people: ["-", "+"] };
-  const selected = { lightning: new Set(filterValues.lightning), location: new Set(filterValues.location), people: new Set(filterValues.people) };
-  let amount = "1";
+  const filterValues = { energy: ["1", "2", "3"], location: ["IN", "OUT"], people: ["-", "+"] };
+  const selected = { energy: new Set(filterValues.energy), location: new Set(filterValues.location), people: new Set(filterValues.people) };
+  let taskCount = "1";
 
   const render = () => {
-    const matchingTasks = tasks.filter((task) => selected.lightning.has(task.lightning) && (selected.location.has(task.location) || task.location === "INT") && (selected.people.has(task.people) || task.people === "="));
-    const count = amount === "all" ? matchingTasks.length : Math.min(Number(amount), matchingTasks.length);
+    const matchesLocation = (task) => (task.location === "INT" ? selected.location.size > 0 : selected.location.has(task.location));
+    const matchesPeople = (task) => (task.people === "=" ? selected.people.size > 0 : selected.people.has(task.people));
+    const matchingTasks = tasks.filter((task) => selected.energy.has(task.energy) && matchesLocation(task) && matchesPeople(task));
+    const count = taskCount === "all" ? matchingTasks.length : Math.min(Number(taskCount), matchingTasks.length);
     const remainingTasks = [...matchingTasks];
     const displayedTasks =
-      amount === "all"
+      taskCount === "all"
         ? matchingTasks
         : Array.from({ length: count }, () => {
             const task = getRandomItem(remainingTasks);
@@ -848,12 +855,29 @@ async function openMoodLifter() {
           });
     const taskList = displayedTasks.length ? displayedTasks.map((task) => `<li>${task.text}</li>`).join("") : "<li>No matching tasks.</li>";
     const content = document.getElementById("reward-content");
-    const options = (dimension, values, type = "checkbox") => values.map((value) => `<label><input type="${type}" name="mood-${dimension}" data-dimension="${dimension}" data-filter="${value}">${value}</label>`).join("");
-    content.innerHTML = `<div class="tool-modal mood-lifter-modal"><h3>Mood Lifter</h3><div class="mood-lifter-filters"><fieldset><legend>⚡</legend>${options("lightning", filterValues.lightning)}</fieldset><fieldset><legend>📍</legend>${options("location", filterValues.location)}</fieldset><fieldset><legend>👥</legend>${options("people", filterValues.people)}</fieldset><fieldset><legend>Tasks</legend>${options("amount", ["1", "3", "all"], "radio")}</fieldset></div><ul class="mood-lifter-list">${taskList}</ul><div class="mood-lifter-actions"><button id="mood-lifter-random" class="action-btn" type="button">🎲</button><button id="tool-close" class="action-btn modal-close-btn" type="button">✔︎</button></div></div>`;
+    const options = (dimension, values, type = "checkbox") => values.map(([value, label] = [values, values]) => `<label><input type="${type}" name="mood-${dimension}" data-dimension="${dimension}" data-filter="${value}">${label}</label>`).join("");
+    content.innerHTML = `<div class="tool-modal mood-lifter-modal"><h3>Mood Lifter</h3><div class="mood-lifter-filters"><fieldset><legend>⚡ Energy</legend>${options(
+      "energy",
+      filterValues.energy.map((value) => [value, value]),
+    )}</fieldset><fieldset><legend>📍</legend>${options(
+      "location",
+      filterValues.location.map((value) => [value, value]),
+    )}</fieldset><fieldset><legend>👥</legend>${options(
+      "people",
+      filterValues.people.map((value) => [value, value]),
+    )}</fieldset><fieldset><legend>Tasks</legend>${options(
+      "taskCount",
+      [
+        ["1", "1"],
+        ["3", "3"],
+        ["all", "All"],
+      ],
+      "radio",
+    )}</fieldset></div><ul class="mood-lifter-list">${taskList}</ul><div class="mood-lifter-actions"><button id="mood-lifter-random" class="action-btn" type="button">🎲</button><button id="tool-close" class="action-btn modal-close-btn" type="button">✔︎</button></div></div>`;
     content.querySelectorAll("input[data-filter]").forEach((input) => {
-      input.checked = input.dataset.filter === amount || selected[input.dataset.dimension]?.has(input.dataset.filter);
+      input.checked = input.dataset.dimension === "taskCount" ? input.dataset.filter === taskCount : selected[input.dataset.dimension].has(input.dataset.filter);
       input.onchange = () => {
-        if (input.dataset.dimension === "amount") amount = input.dataset.filter;
+        if (input.dataset.dimension === "taskCount") taskCount = input.dataset.filter;
         else if (input.checked) selected[input.dataset.dimension].add(input.dataset.filter);
         else selected[input.dataset.dimension].delete(input.dataset.filter);
         render();
@@ -874,7 +898,7 @@ async function openTool(tool) {
   openReward(`
     <div class="tool-modal">
       <h3>${tool.name.replace(/\.[^.]+$/, "")}</h3>
-      <${mediaTag} id="tool-media" src="${response.result.link}" controls></${mediaTag}>
+      <${mediaTag} id="tool-media" src="${response.result.link}" controls autoplay></${mediaTag}>
       <button id="tool-close" class="action-btn modal-close-btn" type="button">✔︎</button>
     </div>
   `);
@@ -882,7 +906,7 @@ async function openTool(tool) {
 }
 
 async function openSevenMinuteBreathing() {
-  const response = await dbx.filesGetTemporaryLink({ path: "/tools/test1.mp3" });
+  const response = await dbx.filesGetTemporaryLink({ path: "/tools/NoiseWave15.mp3" });
   const duration = 7 * 60;
   rewardLockedUntil = Date.now() + duration * 1000;
   openReward(`
@@ -964,8 +988,9 @@ function openQuestPlan(planType, title, tasks, assignments, createDaySelectors) 
 
 async function savePlan(planType) {
   const assignments = {};
-  document.querySelectorAll("#quest-plan-modal .task-select").forEach((select) => {
-    assignments[select.dataset.day] = select.value;
+  const controlSelector = planType === "monthly" ? ".task-input" : ".task-select";
+  document.querySelectorAll(`#quest-plan-modal ${controlSelector}`).forEach((control) => {
+    assignments[control.dataset.day] = control.value.trim();
   });
 
   if (planType === "weekly") {
@@ -975,13 +1000,20 @@ async function savePlan(planType) {
     }
     await saveFileToDropbox(dbx, "EveningTasks.md", newEveningText);
     appData.today.eveningQ = assignments[dayOfWeek] || "";
+    updateQuestText("eveningQ", appData.today.eveningQ);
   } else {
     appData.plan = { ...(appData.plan || {}), monthlyAssignments: assignments };
     appData.today.mainQ = assignments[dayOfWeek] || "";
+    updateQuestText("mainQ", appData.today.mainQ);
   }
   await saveChanges();
   closeReward();
-  alert("Plan saved!");
+}
+
+function updateQuestText(taskType, text) {
+  const taskElement = document.getElementById(`${taskType}-task`);
+  if (text.includes("[")) renderLinkTask(taskElement, text);
+  else taskElement.textContent = text;
 }
 
 /* =========================

@@ -270,7 +270,7 @@ h2 {
 }
 
 #action-plan > .plan-tabs {
-  margin-bottom: 5rem;
+  margin-bottom: 3rem;
 }
 
 .tool-btn,
@@ -337,9 +337,12 @@ h2 {
 }
 
 .mood-lifter-modal {
-  min-width: min(88vw, 56rem);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   max-height: 82vh;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .mood-lifter-filters {
@@ -352,27 +355,29 @@ h2 {
 .mood-lifter-filters fieldset {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.8rem 1.2rem;
+  gap: 0.6rem 1rem;
   border: 1px solid var(--grey2);
-  padding: 0.8rem 1rem;
+  padding: 0.6rem 0.8rem;
 }
 
 .mood-lifter-filters legend {
   padding: 0 0.5rem;
+  font-size: 1.9rem;
 }
 
 .mood-lifter-filters label {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.4rem;
   white-space: nowrap;
+  font-size: 2rem;
 }
 
 .mood-lifter-filters input[type="checkbox"],
 .mood-lifter-filters input[type="radio"] {
-  width: 2rem;
-  height: 2rem;
-  margin-left: 1rem;
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0.9rem 0.9rem 0.7rem 0.9rem;
 }
 
 .mood-lifter-list {
@@ -381,6 +386,8 @@ h2 {
   overflow-y: auto;
   margin: 0;
   list-style: disc;
+  font-size: 2rem;
+  line-height: 1.25;
 }
 
 .mood-lifter-actions {
@@ -1025,7 +1032,9 @@ svg {
   min-width: 60px;
 }
 
-.task-select {
+.task-select,
+.task-input {
+  width: min(60vw, 42rem);
   background: var(--blue1);
   color: var(--grey3);
   border: 1px solid var(--grey2);
@@ -1116,6 +1125,7 @@ svg {
   writing-mode: vertical-lr;
   direction: rtl;
   appearance: slider-vertical;
+  -webkit-tap-highlight-color: transparent;
   cursor: pointer;
 }
 
@@ -1204,8 +1214,7 @@ svg {
 
 .action-plan-image-wrap img {
   display: block;
-  max-width: 90vw;
-  max-height: 58vh;
+  max-width: 97vw;
   object-fit: contain;
   user-select: none;
   -webkit-user-drag: none;

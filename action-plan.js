@@ -13,7 +13,16 @@ export async function initActionPlan(appData, dbx) {
   const previousButton = document.getElementById("action-plan-previous");
   const nextButton = document.getElementById("action-plan-next");
   const levels = {};
-  const steps = [createThermometerStep(appData, levels), createImageStep("FW1.svg", "fw1"), createImageStep("FW2.svg", "fw2"), createImageStep("FW3.svg", "fw3"), createImageStep("tc.svg", "tc")];
+  const steps = [
+    createThermometerStep(appData, levels),
+    createImageStep("rp.svg", "rp"),
+    createImageStep("FW1.svg", "fw1"),
+    createImageStep("FW2.svg", "fw2"),
+    createImageStep("FW3.svg", "fw3"),
+    createImageStep("tc.svg", "tc"),
+    createImageStep("reg.svg", "reg"),
+    createImageStep("lp.svg", "lp"),
+  ];
   let currentStep = 0;
 
   container.replaceChildren(...steps);
