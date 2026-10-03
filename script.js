@@ -77,6 +77,12 @@ async function loadApp() {
 }
 
 async function saveChanges() {
+  const orderedData = { lastUpdated: appData.lastUpdated, plan: appData.plan || {} };
+  for (const [key, value] of Object.entries(appData)) {
+    if (key !== "lastUpdated" && key !== "plan") orderedData[key] = value;
+  }
+  Object.keys(appData).forEach((key) => delete appData[key]);
+  Object.assign(appData, orderedData);
   await saveFileToDropbox(dbx, "data.json", JSON.stringify(appData, null, 2));
 }
 
@@ -176,7 +182,7 @@ async function saveAndResetDay(archiveDate = today) {
 
   appData.lastUpdated = today;
 
-  await saveFileToDropbox(dbx, "data.json", JSON.stringify(appData, null, 2));
+  await saveChanges();
 }
 
 // /* =========================
@@ -679,26 +685,67 @@ function renderMoodChart() {
       cell.dataset.date = dateKey;
       cell.textContent = String(day);
 
-      const note = data?.moodNote ? data.moodNote.trim() : "";
-      const label = note ? `<p>${note}</p>` : "<p>No note saved.</p>";
       cell.onclick = () => {
-        openReward(`
-          <div style="max-width:360px; word-break:break-word;">
-            <h3>${dateKey}</h3>
-            <div style="display:flex;gap:8px;padding:1.5rem 0;">
-              <label><input type="checkbox" disabled ${ifO ? "checked" : ""}> O</label>
-              <label><input type="checkbox" disabled ${ifCH ? "checked" : ""}> CH</label>
-              <label><input type="checkbox" disabled ${ifA ? "checked" : ""}> A</label>
-            </div>
-            <p>Mood ${score || "?"}/5</p>
-            ${label}
-          </div>
-        `);
+        openMoodEntryEditor(dateKey, data);
       };
 
       container.appendChild(cell);
     }
   }
+}
+
+function openMoodEntryEditor(dateKey, data = {}) {
+  openReward(`<div class="mood-popup" id="mood-entry-editor"><h3>${dateKey}</h3></div>`);
+
+  const editor = document.getElementById("mood-entry-editor");
+  let moodScore = Number(data.moodScore) || 3;
+  const scoreButtons = document.createElement("div");
+  scoreButtons.className = "mood-button-row";
+  for (let score = 1; score <= 5; score++) {
+    const button = document.createElement("button");
+    button.className = "mood-btn";
+    button.dataset.score = String(score);
+    button.textContent = ["😢", "😟", "😐", "🙂", "😄"][score - 1];
+    button.classList.toggle("active", moodScore === score);
+    button.onclick = () => {
+      moodScore = score;
+      scoreButtons.querySelectorAll(".mood-btn").forEach((scoreButton) => {
+        scoreButton.classList.toggle("active", Number(scoreButton.dataset.score) === moodScore);
+      });
+    };
+    scoreButtons.appendChild(button);
+  }
+
+  const noteLabel = document.createElement("label");
+  noteLabel.textContent = "Note";
+  const noteInput = document.createElement("textarea");
+  noteInput.id = "mood-note-input";
+  noteInput.value = data.moodNote || "";
+  noteLabel.appendChild(noteInput);
+
+  const saveButton = document.createElement("button");
+  saveButton.className = "action-btn";
+  saveButton.type = "button";
+  saveButton.textContent = "💾";
+  saveButton.onclick = async () => {
+    let entry = appData.today;
+    if (dateKey !== today) {
+      appData.daily = appData.daily || {};
+      entry = appData.daily[dateKey] || (appData.daily[dateKey] = {});
+    }
+    entry.moodScore = moodScore;
+    entry.moodNote = noteInput.value.trim();
+    await saveChanges();
+    if (dateKey === today) {
+      updateMoodButtons();
+      renderDailyStats();
+    }
+    renderMoodChart();
+    closeReward();
+  };
+
+  editor.append(scoreButtons, noteLabel, saveButton);
+  noteInput.focus();
 }
 
 /* =========================
@@ -711,16 +758,15 @@ async function loadPlan() {
   // Load weekly options and assignments
   const [eveningText, monthlyText] = await Promise.all([fetchFile(dbx, "EveningTasks.md"), fetchFile(dbx, "MonthlyTasks.md")]);
   const eveningLines = eveningText.split("\n").filter((line) => line.trim());
-  const eveningTasks = eveningLines.map((line) => {
-    const match = line.match(/\[.*?\]\s*(.*)/);
-    return match ? match[1] : line;
-  });
+  const savedWeeklyTasks = Array.isArray(appData.plan?.weeklyTasks) ? appData.plan.weeklyTasks : [];
+  const fileTasks = eveningLines.map((line) => line.match(/^\[[^\]]+\]\s*(.*)$/)?.[1] || line);
+  const eveningTasks = [...new Set([...savedWeeklyTasks, ...fileTasks].filter((task) => task && task !== "None"))];
 
   const weeklyAssignments = {};
   days.forEach((day) => {
     const currentLine = eveningLines.find((line) => line.startsWith(`[${day}]`));
     const match = currentLine?.match(/\[.*?\]\s*(.*)/);
-    if (match && match[1] !== "None") weeklyAssignments[day] = match[1];
+    if (match && match[1] && match[1] !== "None") weeklyAssignments[day] = match[1];
   });
 
   // Load monthly options
@@ -754,19 +800,18 @@ async function loadPlan() {
         return;
       }
       const select = dayDiv.querySelector(".task-select");
-      select.innerHTML = '<option value="">None</option>';
       tasks.forEach((task) => {
         const option = document.createElement("option");
         option.value = task;
         option.textContent = task;
         select.appendChild(option);
       });
-      select.value = assignments[day] || "";
+      select.value = assignments[day] || tasks[0] || "";
     });
     const saveButton = document.createElement("button");
     saveButton.className = "load-btn";
     saveButton.textContent = "Save Plan";
-    saveButton.onclick = () => savePlan(planType);
+    saveButton.onclick = () => savePlan(planType, tasks, assignments);
     container.appendChild(saveButton);
   };
 
@@ -986,7 +1031,7 @@ function openQuestPlan(planType, title, tasks, assignments, createDaySelectors) 
   createDaySelectors(document.getElementById("quest-plan-modal"), tasks, assignments, planType);
 }
 
-async function savePlan(planType) {
+async function savePlan(planType, availableTasks = [], currentAssignments = {}) {
   const assignments = {};
   const controlSelector = planType === "monthly" ? ".task-input" : ".task-select";
   document.querySelectorAll(`#quest-plan-modal ${controlSelector}`).forEach((control) => {
@@ -999,6 +1044,11 @@ async function savePlan(planType) {
       newEveningText += `[${day}] ${assignments[day] || "None"}\n`;
     }
     await saveFileToDropbox(dbx, "EveningTasks.md", newEveningText);
+    appData.plan = {
+      ...(appData.plan || {}),
+      weeklyTasks: [...new Set([...availableTasks, ...Object.values(assignments)].filter((task) => task && task !== "None"))],
+    };
+    Object.assign(currentAssignments, assignments);
     appData.today.eveningQ = assignments[dayOfWeek] || "";
     updateQuestText("eveningQ", appData.today.eveningQ);
   } else {
